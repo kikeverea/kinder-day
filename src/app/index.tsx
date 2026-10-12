@@ -1,98 +1,62 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { dayOfWeek } from '@/domain/day';
+import { greeting } from '@/domain/format';
+import { completion } from '@/domain/progress';
+import { routinesForDay } from '@/domain/schedule';
+import { useNow } from '@/hooks/use-now';
+import { useAppStore } from '@/store';
+import { colors, fonts, spacing, sticker } from '@/theme/tokens';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+// Phase 0 placeholder: proves fonts, tokens and persisted store are wired. Replaced by Kid Home in phase 2.
+export default function KidHome() {
+  const routines = useAppStore((s) => s.routines);
+  const dayOrder = useAppStore((s) => s.dayOrder);
+  const progress = useAppStore((s) => s.progress);
+  const kidName = useAppStore((s) => s.settings.kidName);
+
+  const now = useNow();
+  const hello = greeting(new Date(now).getHours());
+  const todays = routinesForDay(routines, dayOrder, dayOfWeek(now));
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <SafeAreaView style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.greeting}>{hello.text}</Text>
+        <Text style={styles.name}>
+          {kidName}! {hello.emoji}
+        </Text>
+        {todays.map((r) => {
+          const { done, total } = completion(r, progress);
+          return (
+            <View key={r.id} style={[styles.card, { backgroundColor: r.color }]}>
+              <Text style={styles.cardTitle}>
+                {r.emoji} {r.name}
+              </Text>
+              <Text style={styles.cardMeta}>
+                {done} of {total}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+  screen: { flex: 1, backgroundColor: colors.kidGround },
+  content: { paddingHorizontal: spacing.screenX, paddingVertical: 24, gap: spacing.kidListGap },
+  greeting: { fontFamily: fonts.medium, fontSize: 20, color: colors.muted },
+  name: { fontFamily: fonts.bold, fontSize: 44, color: colors.ink, marginBottom: 12 },
+  card: {
+    padding: 20,
+    borderWidth: sticker.border,
+    borderColor: colors.ink,
+    borderRadius: sticker.radius.card,
+    boxShadow: `0 ${sticker.shadow.card}px 0 ${colors.ink}`,
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  cardTitle: { fontFamily: fonts.semibold, fontSize: 24, color: colors.ink },
+  cardMeta: { fontFamily: fonts.medium, fontSize: 15, color: colors.secondary },
 });
