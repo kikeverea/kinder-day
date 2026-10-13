@@ -25,6 +25,8 @@ npx jest src/domain/__tests__/today.test.ts   # single file
 npx jest -t "rollover"                         # tests matching a name
 ```
 
+Installable APK (EAS, profiles in `eas.json`): `npx eas-cli@latest build -p android --profile preview`. Store build: `--profile production` (versionCode auto-increments remotely). `android.package` is `com.kinderday.app`. Don't change it after the app is installed or published, because Android treats a new package as a different app and its data is lost.
+
 Test files must end in `.test.ts(x)` (non-test helpers such as `__tests__/fixtures.ts` are not collected).
 
 ## Git
