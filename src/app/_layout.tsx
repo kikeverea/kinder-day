@@ -11,6 +11,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { useStoreClock } from '@/hooks/use-store-clock';
+import { useAppStore } from '@/store';
 import { colors } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
@@ -22,6 +24,8 @@ export default function RootLayout() {
     Fredoka_600SemiBold,
     Fredoka_700Bold,
   });
+  const parentUnlocked = useAppStore((s) => s.parentUnlocked);
+  useStoreClock();
 
   useEffect(() => {
     if (loaded || error) SplashScreen.hideAsync();
@@ -35,9 +39,17 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
+          animation: 'fade',
           contentStyle: { backgroundColor: colors.kidGround },
-        }}
-      />
+        }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="routine/[id]" />
+        <Stack.Screen name="result/[id]" options={{ gestureEnabled: false }} />
+        {/* Grown-ups area: unreachable (and dropped from history) unless unlocked from Kid Home. */}
+        <Stack.Protected guard={parentUnlocked}>
+          <Stack.Screen name="parent/index" options={{ contentStyle: { backgroundColor: colors.parentGround } }} />
+        </Stack.Protected>
+      </Stack>
     </GestureHandlerRootView>
   );
 }

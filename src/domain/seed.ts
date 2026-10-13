@@ -56,4 +56,4 @@ export const createSeedRoutines = (): Routine[] => [
   },
 ];
 
-export const DEFAULT_SETTINGS: Settings = { kidName: 'Mia', regularMin: 50, confetti: true };
+export const DEFAULT_SETTINGS: Settings = { kidName: 'Mia', graceMins: 5, confetti: true };

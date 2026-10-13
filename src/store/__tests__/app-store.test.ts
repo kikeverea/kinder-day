@@ -26,10 +26,10 @@ it('persists data but never the parent unlock', () => {
 it('rehydrates synchronously from storage', () => {
   const storage = createMemoryStorage();
   const first = createAppStore(storage);
-  first.getState().updateSettings({ regularMin: 70 });
+  first.getState().updateSettings({ graceMins: 8 });
 
   const second = createAppStore(storage);
-  expect(second.getState().settings.regularMin).toBe(70);
+  expect(second.getState().settings.graceMins).toBe(8);
   expect(second.getState().parentUnlocked).toBe(false);
 });
 
@@ -39,7 +39,7 @@ it("drops yesterday's progress when rehydrating on a new day", () => {
     runs: { morning: { openedAt: 1, steps: {} } },
   };
   const storage = createMemoryStorage({
-    [STORAGE_KEY]: JSON.stringify({ state: yesterday, version: 3 }),
+    [STORAGE_KEY]: JSON.stringify({ state: yesterday, version: 5 }),
   });
   const store = createAppStore(storage);
   expect(store.getState().runs).toEqual({});
@@ -49,7 +49,7 @@ it('fills in settings added after the data was saved', () => {
   const old = createInitialData(Date.now());
   const { confetti: _dropped, ...oldSettings } = old.settings;
   const storage = createMemoryStorage({
-    [STORAGE_KEY]: JSON.stringify({ state: { ...old, settings: oldSettings }, version: 3 }),
+    [STORAGE_KEY]: JSON.stringify({ state: { ...old, settings: oldSettings }, version: 5 }),
   });
   expect(createAppStore(storage).getState().settings.confetti).toBe(true);
 });
@@ -70,5 +70,47 @@ it('drops pre-v3 today data but keeps routines and settings', () => {
   expect(state.results).toEqual({});
   expect(state).not.toHaveProperty('progress');
   expect(state).not.toHaveProperty('timers');
-  expect(state.settings.kidName).toBe('Sami');
+  expect(state.settings).toEqual({ kidName: 'Sami', graceMins: 5, confetti: true });
+});
+
+it('does not write storage when an action changes nothing', () => {
+  const storage = createMemoryStorage();
+  const setItem = jest.spyOn(storage, 'setItem');
+  const store = createAppStore(storage);
+  const now = Date.now();
+  store.getState().openRoutine('morning', now);
+  const writes = setItem.mock.calls.length;
+  store.getState().tick(now + 1000);
+  store.getState().tick(now + 2000);
+  store.getState().lockParent();
+  expect(setItem.mock.calls.length).toBe(writes);
+});
+
+it('migrates v3 runs: finished routines get finishedAt from their result', () => {
+  const now = Date.now();
+  const v3 = {
+    ...createInitialData(now),
+    runs: {
+      morning: { openedAt: now, steps: {} },
+      bed: { openedAt: now, steps: {} },
+    },
+    results: { morning: { rating: 'good', doneSteps: 7, totalSteps: 7, finishedAt: now, secs: 60 } },
+  };
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v3, version: 3 }) });
+  const { runs } = createAppStore(storage).getState();
+  expect(runs.morning.finishedAt).toBe(now);
+  expect(runs.bed.finishedAt).toBeNull();
+});
+
+it('migrates v4: regularMin → graceMins, results gain overtimeSecs', () => {
+  const now = Date.now();
+  const v4 = {
+    ...createInitialData(now),
+    settings: { kidName: 'Sami', regularMin: 70, confetti: false },
+    results: { bed: { rating: 'good', doneSteps: 5, totalSteps: 5, finishedAt: now, secs: 60 } },
+  };
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v4, version: 4 }) });
+  const state = createAppStore(storage).getState();
+  expect(state.settings).toEqual({ kidName: 'Sami', graceMins: 5, confetti: false });
+  expect(state.results.bed.overtimeSecs).toBe(0);
 });

@@ -4,6 +4,7 @@ import { T0, min, morning, sec } from './fixtures';
 
 const run = (steps: Record<string, Partial<StepRun>> = {}): RoutineRun => ({
   openedAt: T0,
+  finishedAt: null,
   steps: Object.fromEntries(
     Object.entries(steps).map(([id, sr]) => [id, { consumedMs: 0, startedAt: null, doneAt: null, ...sr }]),
   ),

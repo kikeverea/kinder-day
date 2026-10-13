@@ -3,17 +3,21 @@ import { T0, morning } from './fixtures';
 
 describe('rate', () => {
   it.each([
-    [100, 50, 'good'],
-    [99, 50, 'regular'],
-    [50, 50, 'regular'],
-    [49, 50, 'bad'],
-    [0, 0, 'regular'],
-  ] as const)('%i%% with threshold %i → %s', (pct, min, out) => expect(rate(pct, min)).toBe(out));
+    [true, 0, 'good'],
+    [true, 1, 'regular'],
+    [true, 300, 'regular'],
+    [true, 301, 'bad'],
+    [false, 0, 'regular'],
+    [false, 300, 'regular'],
+    [false, 301, 'bad'],
+  ] as const)('allDone=%s, %is over → %s', (allDone, overtimeSecs, out) =>
+    expect(rate({ allDone, overtimeSecs, graceMins: 5 })).toBe(out),
+  );
 });
 
 it('completion counts done steps and ignores entries of deleted steps', () => {
   const doneRun = { consumedMs: 0, startedAt: null, doneAt: T0 };
-  const run = { openedAt: T0, steps: { wake: doneRun, gone: doneRun } };
+  const run = { openedAt: T0, finishedAt: null, steps: { wake: doneRun, gone: doneRun } };
   expect(completion(morning, run)).toEqual({ done: 1, total: 3, left: 2, pct: 33 });
 });
 

@@ -14,6 +14,7 @@ import {
   startStep,
   stepRunOf,
 } from './step-run';
+import { totalLeft } from './timer';
 import type { AppData, Routine, RoutineRun, StepRun, TodayData } from './types';
 
 export const emptyToday = (now: number): TodayData => ({
@@ -44,12 +45,20 @@ export const tick = <S extends AppData>(state: S, now: number): S => {
   return s;
 };
 
-/** Creates today's run on first open (starting the first step if it is a max step); reopening keeps it. */
+/**
+ * Creates today's run on first open (starting the first step if it is a max step).
+ * Reopening keeps it, and reopening a finished routine resumes its clock.
+ */
 export const openRoutine = <S extends AppData>(state: S, routineId: string, now: number): S => {
   const s = rollover(state, now);
   const routine = s.routines.find((r) => r.id === routineId);
   if (!routine) return s;
-  const run = s.runs[routineId] ?? { openedAt: now, steps: {} };
+  const existing = s.runs[routineId];
+  const run: RoutineRun = !existing
+    ? { openedAt: now, finishedAt: null, steps: {} }
+    : existing.finishedAt !== null
+      ? { ...existing, finishedAt: null }
+      : existing;
   return withRun(s, routineId, advance(routine, run, now));
 };
 
@@ -108,23 +117,26 @@ export const resumeStep = <S extends AppData>(state: S, routineId: string, now: 
     return focus && sr && !isRunning(sr) ? withStep(run, focus.id, startStep(sr, now)) : run;
   });
 
-/** "I'm finished": always allowed; records today's result for the routine. */
+/** "I'm finished": always allowed; records today's result and stops the routine's clock. */
 export const finishRoutine = <S extends AppData>(state: S, routineId: string, now: number): S => {
   const s = tick(state, now);
   const routine = s.routines.find((r) => r.id === routineId);
   if (!routine) return s;
   const run = s.runs[routineId];
-  const { done, total, pct } = completion(routine, run);
+  const { done, total } = completion(routine, run);
+  const overtimeSecs = Math.max(0, -totalLeft(routine, run, now));
+  const stopped = run && settle(routine, { ...run, finishedAt: now }, now);
   return {
-    ...s,
+    ...(stopped ? withRun(s, routineId, stopped) : s),
     results: {
       ...s.results,
       [routineId]: {
-        rating: rate(pct, s.settings.regularMin),
+        rating: rate({ allDone: done === total, overtimeSecs, graceMins: s.settings.graceMins }),
         doneSteps: done,
         totalSteps: total,
         finishedAt: now,
         secs: run ? Math.round((now - run.openedAt) / 1000) : 0,
+        overtimeSecs,
       },
     },
   };

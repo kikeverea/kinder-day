@@ -32,6 +32,8 @@ export type RoutineResult = {
   finishedAt: number;
   /** Seconds since the routine was opened. */
   secs: number;
+  /** Seconds over the routine's total time when finished (0 when on time). */
+  overtimeSecs: number;
 };
 
 /**
@@ -54,14 +56,16 @@ export type StepRun = {
 export type RoutineRun = {
   /** When the routine was first opened today. */
   openedAt: number;
+  /** When "I'm finished" was tapped; null while in progress. A finished run's clock is stopped. */
+  finishedAt: number | null;
   /** stepId → that step's timer. Steps never touched have no entry. */
   steps: Record<string, StepRun>;
 };
 
 export type Settings = {
   kidName: string;
-  /** Completion % at or above which the result is "regular" (👀) instead of "bad" (😬). */
-  regularMin: number;
+  /** Minutes over the routine's time still rated "regular" (😶); beyond that it's "bad" (😬). */
+  graceMins: number;
   confetti: boolean;
 };
 

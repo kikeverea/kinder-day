@@ -14,6 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+Run on a phone: install **Expo Go** from the Play Store, run `npm start` (phone and computer on the same Wi-Fi) and scan the QR code with Expo Go. Use `npx expo start --tunnel` if the LAN connection fails.
+
 ```bash
 npm start                    # expo start (npm run android to open on a device/emulator)
 npm run lint                 # expo lint
@@ -39,11 +41,16 @@ The layers depend downward only: `app/` → `store/` → `domain/`, with `storag
 - **Step behaviour**:
   - Max ("Up to") steps auto-run when they become current (first not done). They keep counting past zero (overtime, shown with 😬). Un-doing one resumes it with the time it had left.
   - Exact steps start on tap and enter **focus mode**. They can be paused (`pauseStep`/`resumeStep`) but never stopped, and focus mode stays on while paused. Every `toggleStep` tap is ignored in focus mode. A done exact step resets to its full time on tap (reload icon).
+  - "I'm finished" sets `RoutineRun.finishedAt` and stops the routine's clock (`settle` runs nothing in a finished run). Reopening the routine clears it and resumes. `isRoutineRunning()` (a step's clock is ticking) drives the timer badge on Kid Home.
+  - **Result rating is by time** (this differs from the handoff, which rated by % done). Overtime = how far "All steps" went negative at finish. 😄 good = on time, 😶 regular = up to `settings.graceMins` (default 5) over, 😬 bad = beyond that. Undone steps cap the rating at 😶. See `rate()` in `progress.ts`, with copy in `format.ts` (`resultTitle`/`resultSubtitle`).
   - Display values come from `timer.ts`: `timerCard`, `focusState`, `stepRow` and `totalLeft` ("All steps" = total step time minus time used, so idle time isn't counted).
 - **"Today" data** (`runs`, `results`) is keyed by `dayKey` (local YYYY-MM-DD) and wiped by `rollover()` when the day changes, including on rehydrate.
-- **`src/store/`**: a zustand store whose actions only delegate to domain functions. `create-app-store.ts` exports a factory that takes a `KeyValueStorage`, which lets tests use `createMemoryStorage()`. `index.ts` builds the app singleton `useAppStore`. `parentUnlocked` is session-only and deliberately excluded from persistence (`partialize`). Persisted data is versioned (`STORAGE_VERSION`): bump it and add a `migrate` when changing the `AppData` shape.
+- **`src/store/`**: a zustand store whose actions only delegate to domain functions, through `apply()`, which skips `set` when the domain function returned the same object (`persist` writes storage on every `set`). `create-app-store.ts` exports a factory that takes a `KeyValueStorage`, which lets tests use `createMemoryStorage()`. `index.ts` builds the app singleton `useAppStore`. `parentUnlocked` is session-only and deliberately excluded from persistence (`partialize`). Persisted data is versioned (`STORAGE_VERSION`): bump it and add a `migrate` when changing the `AppData` shape.
 - **`src/storage/`**: the persistence boundary, which is expected to change soon. Everything goes through the `KeyValueStorage` interface, and the implementation is chosen in `storage/index.ts` only (currently SQLite via `expo-sqlite/kv-store`, using the sync API so state is ready on first render). Never import `expo-sqlite` or any other backend outside this folder. An async replacement is supported by zustand `persist`, but screens would then need to wait for `persist.hasHydrated()`.
 - **`src/theme/`**: design tokens (`tokens.ts`) and `color.ts`, which provides `mixOklab`/`routineTint`/`doneTint`, an RN substitute for CSS `color-mix(in oklab)`.
 - **Rendering time**: never call `Date.now()` during render (the React Compiler lint rule `react-hooks/purity` fails). Use `useNow(intervalMs)` from `src/hooks/use-now.ts`.
-- **Kid-side "sticker" style**: 3dp ink borders plus a hard offset shadow done with RN `boxShadow` (`0 6px 0 #2B2340`, no blur). Don't use `elevation`, which blurs.
+- **Kid-side "sticker" style**: 3dp ink borders plus a hard, unblurred offset shadow. Pressable stickers use `StickerPressable` (`src/components/kid/`), which draws the shadow as a real ink layer so the face can slide onto it when pressed. Static stickers can use RN `boxShadow` (`0 6px 0 #2B2340`). Never use `elevation`, which blurs.
+- **UI building blocks**: `AppText` (Fredoka by `weight`, never raw `fontFamily`), `Emoji` (every emoji goes through it, so swapping to bundled images is one file), and kid components in `src/components/kid/`. Screens compute display values from `src/domain/timer.ts` and copy from `src/domain/format.ts` rather than inline. Looping animations use Reanimated 4 CSS keyframes (`animationName`), and value-driven ones use shared values.
+- **Clock**: `useStoreClock()` (mounted once in the root layout) calls the store's `tick` every second and on foreground. Screens re-render with `useNow(1000)`.
+- **Parent lock**: parent routes sit inside `Stack.Protected guard={parentUnlocked}`. Kid Home re-locks on focus and navigates to `/parent` in an effect after `unlockParent()`, so the route exists before the push.
 - **Fonts**: Fredoka, loaded with `useFonts` in `src/app/_layout.tsx` (works in Expo Go). Reference families through `fonts.*` in `tokens.ts`.

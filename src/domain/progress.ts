@@ -11,5 +11,23 @@ export const completion = (routine: Routine, run: RoutineRun | undefined) => {
   return { done, total, left: total - done, pct: total ? Math.round((done / total) * 100) : 0 };
 };
 
-export const rate = (pct: number, regularMin: number): Rating =>
-  pct >= 100 ? 'good' : pct >= regularMin ? 'regular' : 'bad';
+/**
+ * Result rating, by time:
+ * - good 😄: within the routine's total time;
+ * - regular 😶: up to `graceMins` over;
+ * - bad 😬: more than `graceMins` over.
+ * Undone steps cap the rating at regular, so 😄 always means everything done on time.
+ */
+export const rate = ({
+  allDone,
+  overtimeSecs,
+  graceMins,
+}: {
+  allDone: boolean;
+  overtimeSecs: number;
+  graceMins: number;
+}): Rating => {
+  const byTime: Rating =
+    overtimeSecs <= 0 ? 'good' : overtimeSecs <= graceMins * 60 ? 'regular' : 'bad';
+  return byTime === 'good' && !allDone ? 'regular' : byTime;
+};

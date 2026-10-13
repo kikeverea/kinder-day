@@ -15,6 +15,10 @@ import {
 } from './step-run';
 import type { Routine, RoutineRun, StepRun } from './types';
 
+/** A step's clock is ticking right now (a finished run never ticks). */
+export const isRoutineRunning = (run: RoutineRun | undefined) =>
+  !!run && run.finishedAt === null && Object.values(run.steps).some(isRunning);
+
 /** The exact step in focus mode: started (running or paused) and not done. */
 export const focusStep = (routine: Routine, run: RoutineRun | undefined) =>
   routine.steps.find((s) => {
@@ -35,13 +39,15 @@ const withSteps = (run: RoutineRun, steps: Record<string, StepRun>): RoutineRun 
 
 /**
  * Enforces "at most one step runs":
+ * - a finished run: nothing runs;
  * - in focus mode only the focus step may run (it is never auto-resumed after a pause);
  * - otherwise the current step runs if it is a max step (an exact step waits for a tap).
  * Every other step is paused.
  */
 export const settle = (routine: Routine, run: RoutineRun, now: number): RoutineRun => {
-  const focus = focusStep(routine, run);
-  const current = focus ?? currentStep(routine, run);
+  const finished = run.finishedAt !== null;
+  const focus = finished ? undefined : focusStep(routine, run);
+  const current = finished ? undefined : (focus ?? currentStep(routine, run));
   const autoRunId = !focus && current?.mode === 'max' ? current.id : undefined;
   const keepId = focus?.id ?? autoRunId;
 

@@ -36,16 +36,36 @@ export type AppState = AppData & {
 type PersistedState = AppData;
 
 export const STORAGE_KEY = 'kinder-day.state';
-const STORAGE_VERSION = 3;
+const STORAGE_VERSION = 5;
 
-/** Upgrades persisted data from older `STORAGE_VERSION`s. */
+/** Upgrades persisted data from older `STORAGE_VERSION`s. Steps run in order. */
 export const migrate = (persisted: unknown, version: number): PersistedState => {
-  const state = persisted as PersistedState & Record<string, unknown>;
+  let state = persisted as PersistedState & Record<string, unknown>;
   if (version < 3) {
     // v3: per-step timers (`runs`) replace `progress` + `timers`; results use `finishedAt`.
     // Today's data is disposable (it resets daily), so drop it rather than convert it.
     const { progress: _progress, timers: _timers, ...rest } = state;
-    return { ...rest, runs: {}, results: {} } as PersistedState;
+    state = { ...rest, runs: {}, results: {} };
+  }
+  if (version < 4) {
+    // v4: RoutineRun.finishedAt (finished routines stop their clock).
+    const runs: PersistedState['runs'] = {};
+    for (const [id, run] of Object.entries(state.runs ?? {})) {
+      runs[id] = { ...run, finishedAt: state.results?.[id]?.finishedAt ?? null };
+    }
+    state = { ...state, runs };
+  }
+  if (version < 5) {
+    // v5: rating by time — settings.regularMin → graceMins (filled from defaults on merge);
+    // today's results gain overtimeSecs.
+    const { regularMin: _regularMin, ...settings } = (state.settings ?? {}) as Settings & {
+      regularMin?: number;
+    };
+    const results: PersistedState['results'] = {};
+    for (const [id, r] of Object.entries(state.results ?? {})) {
+      results[id] = { ...r, overtimeSecs: r.overtimeSecs ?? 0 };
+    }
+    state = { ...state, settings: settings as Settings, results };
   }
   return state;
 };
@@ -60,35 +80,50 @@ export const createInitialData = (now = Date.now()): AppData => ({
 export const createAppStore = (storage: KeyValueStorage) =>
   create<AppState>()(
     persist(
-      (set) => ({
-        ...createInitialData(),
-        parentUnlocked: false,
+      (set, get) => {
+        /**
+         * Runs a domain transition and commits it only if it produced a new state.
+         * `persist` writes storage on every `set`, and domain functions keep identity when
+         * nothing changed, so idle clock ticks cost neither a re-render nor a write.
+         */
+        const apply = (fn: (s: AppState) => AppState) => {
+          const current = get();
+          const next = fn(current);
+          if (next !== current) set(next, true);
+        };
 
-        unlockParent: () => set({ parentUnlocked: true }),
-        lockParent: () => set({ parentUnlocked: false }),
+        return {
+          ...createInitialData(),
+          parentUnlocked: false,
 
-        tick: (now = Date.now()) => set((s) => today.tick(s, now)),
-        openRoutine: (routineId, now = Date.now()) =>
-          set((s) => today.openRoutine(s, routineId, now)),
-        toggleStep: (routineId, stepId, now = Date.now()) =>
-          set((s) => today.toggleStep(s, routineId, stepId, now)),
-        pauseStep: (routineId, now = Date.now()) => set((s) => today.pauseStep(s, routineId, now)),
-        resumeStep: (routineId, now = Date.now()) =>
-          set((s) => today.resumeStep(s, routineId, now)),
-        finishRoutine: (routineId, now = Date.now()) =>
-          set((s) => today.finishRoutine(s, routineId, now)),
-        resetToday: (now = Date.now()) => set((s) => today.resetToday(s, now)),
+          unlockParent: () => set({ parentUnlocked: true }),
+          lockParent: () => {
+            if (get().parentUnlocked) set({ parentUnlocked: false });
+          },
 
-        saveRoutine: (routine) => set((s) => routines.upsertRoutine(s, routine)),
-        deleteRoutine: (routineId) => set((s) => routines.deleteRoutine(s, routineId)),
-        addRoutineToDay: (routineId, day) =>
-          set((s) => routines.addRoutineToDay(s, routineId, day)),
-        removeRoutineFromDay: (routineId, day) =>
-          set((s) => routines.removeRoutineFromDay(s, routineId, day)),
-        reorderDay: (day, routineIds) => set((s) => routines.reorderDay(s, day, routineIds)),
+          tick: (now = Date.now()) => apply((s) => today.tick(s, now)),
+          openRoutine: (routineId, now = Date.now()) =>
+            apply((s) => today.openRoutine(s, routineId, now)),
+          toggleStep: (routineId, stepId, now = Date.now()) =>
+            apply((s) => today.toggleStep(s, routineId, stepId, now)),
+          pauseStep: (routineId, now = Date.now()) => apply((s) => today.pauseStep(s, routineId, now)),
+          resumeStep: (routineId, now = Date.now()) =>
+            apply((s) => today.resumeStep(s, routineId, now)),
+          finishRoutine: (routineId, now = Date.now()) =>
+            apply((s) => today.finishRoutine(s, routineId, now)),
+          resetToday: (now = Date.now()) => apply((s) => today.resetToday(s, now)),
 
-        updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
-      }),
+          saveRoutine: (routine) => apply((s) => routines.upsertRoutine(s, routine)),
+          deleteRoutine: (routineId) => apply((s) => routines.deleteRoutine(s, routineId)),
+          addRoutineToDay: (routineId, day) =>
+            apply((s) => routines.addRoutineToDay(s, routineId, day)),
+          removeRoutineFromDay: (routineId, day) =>
+            apply((s) => routines.removeRoutineFromDay(s, routineId, day)),
+          reorderDay: (day, routineIds) => apply((s) => routines.reorderDay(s, day, routineIds)),
+
+          updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+        };
+      },
       {
         name: STORAGE_KEY,
         version: STORAGE_VERSION,

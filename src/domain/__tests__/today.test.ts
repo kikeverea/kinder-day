@@ -1,3 +1,4 @@
+import { isRoutineRunning } from '../routine-run';
 import {
   finishRoutine,
   missedSteps,
@@ -33,7 +34,7 @@ describe('rollover', () => {
 describe('openRoutine', () => {
   it('creates the run and starts the first step when it is a max step', () => {
     const s = openRoutine(makeState(), 'morning', T0);
-    expect(s.runs.morning.openedAt).toBe(T0);
+    expect(s.runs.morning).toMatchObject({ openedAt: T0, finishedAt: null });
     expect(steps(s).wake).toEqual({ consumedMs: 0, startedAt: T0, doneAt: null });
   });
 
@@ -171,20 +172,59 @@ describe('pause / resume', () => {
 });
 
 describe('finishRoutine', () => {
-  it('rates by completion against the threshold and records elapsed time', () => {
-    let s = atTeeth();
-    s = finishRoutine(s, 'morning', T0 + min(4));
-    expect(s.results.morning).toEqual({
-      rating: 'bad',
-      doneSteps: 1,
-      totalSteps: 3,
-      finishedAt: T0 + min(4),
-      secs: 240,
-    });
+  /**
+   * Morning's total time is 9 min. Wake up runs from T0, Brush my teeth (2 min) starts right
+   * after it, and Put on my clothes auto-runs until ticked at `doneAt`: with no idle time,
+   * the time used equals `doneAt − T0`.
+   */
+  const allDoneAt = (wakeDoneAt: number, doneAt: number, grace = 5) => {
+    let s = openRoutine(
+      makeState({ settings: { kidName: 'Mia', graceMins: grace, confetti: true } }),
+      'morning',
+      T0,
+    );
+    s = toggleStep(s, 'morning', 'wake', T0 + wakeDoneAt);
+    s = toggleStep(s, 'morning', 'teeth', T0 + wakeDoneAt);
+    s = toggleStep(s, 'morning', 'dress', T0 + doneAt);
+    return finishRoutine(s, 'morning', T0 + doneAt).results.morning;
+  };
 
-    s = toggleStep(s, 'morning', 'dress', T0 + min(5));
-    s = finishRoutine(s, 'morning', T0 + min(6));
-    expect(s.results.morning.rating).toBe('regular');
+  it('records the result', () => {
+    expect(allDoneAt(min(1), min(8))).toEqual({
+      rating: 'good',
+      doneSteps: 3,
+      totalSteps: 3,
+      finishedAt: T0 + min(8),
+      secs: 480,
+      overtimeSecs: 0,
+    });
+  });
+
+  it('is good when everything is done within the time', () => {
+    expect(allDoneAt(min(1), min(9)).rating).toBe('good');
+  });
+
+  it('is regular up to the grace minutes over, then bad', () => {
+    expect(allDoneAt(min(4), min(12))).toMatchObject({ rating: 'regular', overtimeSecs: 180 });
+    expect(allDoneAt(min(4), min(14))).toMatchObject({ rating: 'regular', overtimeSecs: 300 });
+    expect(allDoneAt(min(4), min(14) + sec(1))).toMatchObject({ rating: 'bad', overtimeSecs: 301 });
+  });
+
+  it('respects a custom grace', () => {
+    expect(allDoneAt(min(4), min(15), 10).rating).toBe('regular');
+  });
+
+  it('caps undone routines at regular even when on time', () => {
+    const r = finishRoutine(atTeeth(), 'morning', T0 + min(4)).results.morning;
+    expect(r).toMatchObject({ rating: 'regular', doneSteps: 1, overtimeSecs: 0 });
+  });
+
+  it('rates undone routines bad when also beyond the grace', () => {
+    const s = toggleStep(openRoutine(makeState(), 'morning', T0), 'morning', 'wake', T0 + min(15));
+    expect(finishRoutine(s, 'morning', T0 + min(15)).results.morning).toMatchObject({
+      rating: 'bad',
+      overtimeSecs: 360,
+    });
   });
 
   it('counts an exact step that ran out before finishing', () => {
@@ -194,10 +234,18 @@ describe('finishRoutine', () => {
     expect(s.results.morning).toMatchObject({ rating: 'good', doneSteps: 3 });
   });
 
-  it('respects a custom threshold', () => {
-    let s = makeState({ settings: { kidName: 'Mia', regularMin: 30, confetti: true } });
-    s = toggleStep(s, 'morning', 'wake', T0);
-    expect(finishRoutine(s, 'morning', T0).results.morning.rating).toBe('regular');
+  it('stops the clock: no step runs and ticks do not restart it', () => {
+    const finished = finishRoutine(openRoutine(makeState(), 'morning', T0), 'morning', T0 + min(1));
+    expect(finished.runs.morning.finishedAt).toBe(T0 + min(1));
+    expect(finished.runs.morning.steps.wake).toEqual({ consumedMs: min(1), startedAt: null, doneAt: null });
+    expect(tick(finished, T0 + min(5)).runs.morning.steps.wake.startedAt).toBeNull();
+  });
+
+  it('reopening a finished routine resumes its clock', () => {
+    const finished = finishRoutine(openRoutine(makeState(), 'morning', T0), 'morning', T0 + min(1));
+    const s = openRoutine(finished, 'morning', T0 + min(5));
+    expect(s.runs.morning.finishedAt).toBeNull();
+    expect(s.runs.morning.steps.wake).toEqual({ consumedMs: min(1), startedAt: T0 + min(5), doneAt: null });
   });
 });
 
@@ -208,4 +256,27 @@ it('resetToday clears runs and results', () => {
 
 it('missedSteps lists steps not done', () => {
   expect(missedSteps(atTeeth(), 'morning').map((x) => x.id)).toEqual(['teeth', 'dress']);
+});
+
+describe('isRoutineRunning', () => {
+  it('is false before the routine is opened', () => {
+    expect(isRoutineRunning(makeState().runs.morning)).toBe(false);
+  });
+
+  it('is true while a max step ticks', () => {
+    expect(isRoutineRunning(openRoutine(makeState(), 'morning', T0).runs.morning)).toBe(true);
+  });
+
+  it('is false while an exact step waits for a tap or is paused', () => {
+    expect(isRoutineRunning(atTeeth().runs.morning)).toBe(false);
+    let s = toggleStep(atTeeth(), 'morning', 'teeth', T0 + min(1));
+    expect(isRoutineRunning(s.runs.morning)).toBe(true);
+    s = pauseStep(s, 'morning', T0 + min(1.5));
+    expect(isRoutineRunning(s.runs.morning)).toBe(false);
+  });
+
+  it('is false once finished', () => {
+    const s = finishRoutine(openRoutine(makeState(), 'morning', T0), 'morning', T0 + min(1));
+    expect(isRoutineRunning(s.runs.morning)).toBe(false);
+  });
 });

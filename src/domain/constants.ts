@@ -44,8 +44,4 @@ export const STEP_MODES: Record<StepMode, { label: string; hint: string }> = {
   },
 };
 
-export const RESULT_COPY = {
-  good: { emoji: '😄', title: 'You did it!' },
-  regular: { emoji: '👀', title: 'Hmm… almost!' },
-  bad: { emoji: '😬', title: 'Sheesh!' },
-} as const;
+export const RESULT_EMOJI = { good: '😄', regular: '😶', bad: '😬' } as const;
