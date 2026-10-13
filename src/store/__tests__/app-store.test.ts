@@ -70,7 +70,7 @@ it('drops pre-v3 today data but keeps routines and settings', () => {
   expect(state.results).toEqual({});
   expect(state).not.toHaveProperty('progress');
   expect(state).not.toHaveProperty('timers');
-  expect(state.settings).toEqual({ kidName: 'Sami', graceMins: 5, confetti: true });
+  expect(state.settings).toEqual({ kidName: 'Sami', graceMins: 5, confetti: true, chimes: true });
 });
 
 it('does not write storage when an action changes nothing', () => {
@@ -111,7 +111,7 @@ it('migrates v4: regularMin → graceMins, results gain overtimeSecs', () => {
   };
   const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v4, version: 4 }) });
   const state = createAppStore(storage).getState();
-  expect(state.settings).toEqual({ kidName: 'Sami', graceMins: 5, confetti: false });
+  expect(state.settings).toEqual({ kidName: 'Sami', graceMins: 5, confetti: false, chimes: true });
   expect(state.results.bed.overtimeSecs).toBe(0);
 });
 

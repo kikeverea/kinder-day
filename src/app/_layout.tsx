@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { useStepChimes } from '@/hooks/use-step-chimes';
 import { useStoreClock } from '@/hooks/use-store-clock';
 import { useAppStore } from '@/store';
 import { colors } from '@/theme/tokens';
@@ -26,6 +27,7 @@ export default function RootLayout() {
   });
   const parentUnlocked = useAppStore((s) => s.parentUnlocked);
   useStoreClock();
+  useStepChimes();
 
   useEffect(() => {
     if (loaded || error) SplashScreen.hideAsync();
@@ -49,6 +51,7 @@ export default function RootLayout() {
         <Stack.Protected guard={parentUnlocked}>
           <Stack.Screen name="parent/index" options={{ contentStyle: { backgroundColor: colors.parentGround } }} />
           <Stack.Screen name="parent/edit/[id]" options={{ contentStyle: { backgroundColor: colors.parentGround } }} />
+          <Stack.Screen name="parent/settings" options={{ contentStyle: { backgroundColor: colors.parentGround } }} />
         </Stack.Protected>
       </Stack>
     </GestureHandlerRootView>

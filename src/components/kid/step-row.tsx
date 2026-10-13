@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
-import Animated, { Easing, Keyframe } from 'react-native-reanimated';
+import Animated, { Easing, Keyframe, useReducedMotion } from 'react-native-reanimated';
 
 import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
@@ -26,6 +26,7 @@ type Props = { step: Step; row: StepRowData; color: string; onPress: () => void 
 export function StepRow({ step, row, color, onPress }: Props) {
   const done = row.status === 'done';
   const exact = step.mode === 'exact';
+  const pop = useReducedMotion() ? undefined : checkPop;
 
   return (
     <StickerPressable
@@ -51,11 +52,11 @@ export function StepRow({ step, row, color, onPress }: Props) {
       </View>
       <View style={[styles.mark, { backgroundColor: done ? colors.ink : colors.white }]}>
         {row.resettable ? (
-          <Animated.View entering={checkPop}>
+          <Animated.View entering={pop}>
             <MaterialIcons name="refresh" size={28} color={colors.white} />
           </Animated.View>
         ) : done ? (
-          <Animated.View entering={checkPop}>
+          <Animated.View entering={pop}>
             <MaterialIcons name="check" size={28} color={colors.white} />
           </Animated.View>
         ) : exact ? (

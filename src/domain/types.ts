@@ -72,6 +72,8 @@ export type Settings = {
   /** Minutes over the routine's time still rated "regular" (😶); beyond that it's "bad" (😬). */
   graceMins: number;
   confetti: boolean;
+  /** Chime + vibration before a step's time runs out and when it's up. */
+  chimes: boolean;
 };
 
 /** Data that belongs to a single calendar day and is cleared when the day changes. */

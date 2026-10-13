@@ -181,7 +181,7 @@ describe('finishRoutine', () => {
    */
   const allDoneAt = (wakeDoneAt: number, doneAt: number, grace = 5) => {
     let s = openRoutine(
-      makeState({ settings: { kidName: 'Mia', graceMins: grace, confetti: true } }),
+      makeState({ settings: { kidName: 'Mia', graceMins: grace, confetti: true, chimes: true } }),
       'morning',
       T0,
     );

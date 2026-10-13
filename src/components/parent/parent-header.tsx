@@ -1,10 +1,13 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { colors } from '@/theme/tokens';
 
-/** "Grown-ups / {name}'s day" with the 🔓 Kid mode button. */
-export function ParentHeader({ kidName, onKidMode }: { kidName: string; onKidMode: () => void }) {
+type Props = { kidName: string; onKidMode: () => void; onSettings: () => void };
+
+/** "Grown-ups / {name}'s day" with ⚙️ settings and the 🔓 Kid mode button. */
+export function ParentHeader({ kidName, onKidMode, onSettings }: Props) {
   return (
     <View style={styles.row}>
       <View style={styles.titles}>
@@ -15,6 +18,13 @@ export function ParentHeader({ kidName, onKidMode }: { kidName: string; onKidMod
           {kidName}&apos;s day
         </AppText>
       </View>
+      <Pressable
+        onPress={onSettings}
+        accessibilityLabel="Settings"
+        hitSlop={6}
+        style={({ pressed }) => [styles.settings, pressed && styles.pressed]}>
+        <MaterialIcons name="settings" size={24} color={colors.accentMuted} />
+      </Pressable>
       <Pressable
         onPress={onKidMode}
         accessibilityRole="button"
@@ -38,6 +48,16 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     borderColor: colors.ink,
     backgroundColor: colors.lock,
+    justifyContent: 'center',
+  },
+  settings: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 2,
+    borderColor: colors.parentBorder,
+    backgroundColor: colors.white,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   pressed: { transform: [{ translateY: 2 }] },

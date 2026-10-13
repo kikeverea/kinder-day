@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { AppText } from '@/components/app-text';
 import { colors, sticker } from '@/theme/tokens';
@@ -38,8 +38,9 @@ export function BigButton({
   height = 66,
   pulsing,
 }: Props) {
+  const reduceMotion = useReducedMotion();
   return (
-    <Animated.View style={pulsing ? pulse : undefined}>
+    <Animated.View style={pulsing && !reduceMotion ? pulse : undefined}>
       <StickerPressable
         onPress={onPress}
         radius={sticker.radius.row}

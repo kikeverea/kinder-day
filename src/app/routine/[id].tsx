@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { LayoutAnimationConfig } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,16 +37,6 @@ export default function RoutineChecklist() {
   useEffect(() => {
     openRoutine(id);
   }, [id, openRoutine]);
-
-  // Success haptic when an exact step finishes and focus mode closes.
-  const focusId = routine ? focusState(routine, run, now)?.step.id : undefined;
-  const lastFocusId = useRef(focusId);
-  useEffect(() => {
-    if (lastFocusId.current && !focusId) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-    lastFocusId.current = focusId;
-  }, [focusId]);
 
   if (!routine) return <Redirect href="/" />;
 

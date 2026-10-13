@@ -1,5 +1,6 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { usePreventRemove } from 'expo-router/react-navigation';
+import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import {
   NestedReorderableList,
@@ -45,10 +46,25 @@ export default function RoutineEditor() {
   const patch = (p: Partial<RoutineDraft>) => setDraft((d) => ({ ...d, ...p }));
   const savable = canSave(draft);
 
+  // Ask before discarding edits (back button, Android back, swipe). Save/Delete leave freely.
+  const navigation = useNavigation();
+  const [initial] = useState(() => JSON.stringify(draft));
+  const [leaving, setLeaving] = useState(false);
+  const dirty = JSON.stringify(draft) !== initial;
+  usePreventRemove(dirty && !leaving, ({ data }) =>
+    Alert.alert('Discard changes?', 'Your changes to this routine will be lost.', [
+      { text: 'Keep editing', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(data.action) },
+    ]),
+  );
+  useEffect(() => {
+    if (leaving) router.back();
+  }, [leaving]);
+
   const save = () => {
     if (!savable) return;
     saveRoutine(toRoutine(draft));
-    router.back();
+    setLeaving(true);
   };
 
   const confirmDelete = () =>
@@ -59,7 +75,7 @@ export default function RoutineEditor() {
         style: 'destructive',
         onPress: () => {
           deleteRoutine(draft.id);
-          router.back();
+          setLeaving(true);
         },
       },
     ]);

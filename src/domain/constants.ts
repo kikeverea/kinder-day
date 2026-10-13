@@ -36,6 +36,8 @@ export const MIN_STEP_MINS = 1;
 export const MAX_STEP_MINS = 60;
 export const DEFAULT_STEP_MINS = 2;
 
+export const MAX_GRACE_MINS = 30;
+
 export const STEP_MODES: Record<StepMode, { label: string; hint: string }> = {
   max: { label: '⚡ Up to', hint: 'Can finish early — the timer is the most time allowed.' },
   exact: {

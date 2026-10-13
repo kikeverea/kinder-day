@@ -47,7 +47,7 @@ export default function ParentHome() {
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       {/* ScrollViewContainer (a ScrollView) lets the week planner's drag list autoscroll the page. */}
       <ScrollViewContainer contentContainerStyle={styles.content}>
-        <ParentHeader kidName={kidName} onKidMode={toKidMode} />
+        <ParentHeader kidName={kidName} onKidMode={toKidMode} onSettings={() => router.push('/parent/settings')} />
         <SegmentedControl options={TABS} value={tab} onChange={setTab} />
         {tab === 'today' ? (
           <TodayTab onFacePress={setFaceFor} />

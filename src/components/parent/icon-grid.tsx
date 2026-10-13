@@ -19,7 +19,9 @@ export function IconGrid({
   emojiSize?: number;
 }) {
   const [width, setWidth] = useState(0);
-  const cell = width ? (width - GAP * (COLUMNS - 1)) / COLUMNS : 0;
+  // Floor so six cells plus gaps never exceed the row (float rounding would wrap the 6th),
+  // then let space-between absorb the leftover pixels so the grid spans the full width.
+  const cell = width ? Math.floor((width - GAP * (COLUMNS - 1)) / COLUMNS) : 0;
 
   return (
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
@@ -40,12 +42,17 @@ export function IconGrid({
             </Pressable>
           );
         })}
+      {/* Pad the last row so space-between doesn't spread a partial row. */}
+      {cell > 0 &&
+        Array.from({ length: (COLUMNS - (ICONS.length % COLUMNS)) % COLUMNS }, (_, i) => (
+          <View key={`pad-${i}`} style={{ width: cell }} />
+        ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: GAP },
   cell: { borderRadius: 14, borderWidth: 2.5, alignItems: 'center', justifyContent: 'center' },
   selected: { backgroundColor: colors.pressedTintSoft },
 });

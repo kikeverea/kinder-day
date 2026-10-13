@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, { cubicBezier } from 'react-native-reanimated';
+import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 
 import { ROUTINE_COLORS } from '@/domain/constants';
 import { colors } from '@/theme/tokens';
@@ -23,6 +23,8 @@ const makePieces = (): Piece[] =>
 export function Confetti() {
   const { height } = useWindowDimensions();
   const [pieces] = useState(makePieces);
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) return null;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
