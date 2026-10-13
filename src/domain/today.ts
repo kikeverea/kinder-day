@@ -1,114 +1,130 @@
 /**
- * Pure state transitions for "today" data (progress, timers, results).
+ * Pure state transitions for "today" data (routine runs and results).
  * Every function takes `now` explicitly so behaviour is deterministic and testable.
  */
 import { dayKey } from './day';
-import { completion, doneStepIds, rate } from './progress';
-import { runEndsAt } from './timer';
-import type { AppData, RoutineTimer, TodayData } from './types';
+import { completion, rate } from './progress';
+import { advance, focusStep, settle } from './routine-run';
+import {
+  completeStep,
+  IDLE_STEP,
+  isDone,
+  isRunning,
+  pauseStep as pauseStepRun,
+  startStep,
+  stepRunOf,
+} from './step-run';
+import type { AppData, Routine, RoutineRun, StepRun, TodayData } from './types';
 
 export const emptyToday = (now: number): TodayData => ({
   dayKey: dayKey(now),
-  progress: {},
+  runs: {},
   results: {},
-  timers: {},
 });
 
 /** Clears today's data if the calendar day changed. Returns the same object when nothing changed. */
 export const rollover = <S extends AppData>(state: S, now: number): S =>
   state.dayKey === dayKey(now) ? state : { ...state, ...emptyToday(now) };
 
-const withTimer = <S extends AppData>(state: S, routineId: string, timer: RoutineTimer): S => ({
-  ...state,
-  timers: { ...state.timers, [routineId]: timer },
+const withRun = <S extends AppData>(state: S, routineId: string, run: RoutineRun): S =>
+  state.runs[routineId] === run ? state : { ...state, runs: { ...state.runs, [routineId]: run } };
+
+const withStep = (run: RoutineRun, stepId: string, sr: StepRun): RoutineRun => ({
+  ...run,
+  steps: { ...run.steps, [stepId]: sr },
 });
 
-/** Starts the routine's timers the first time it is opened today; reopening keeps them running. */
+/** Brings every run up to `now`. Call on each timer tick and when the app returns to the foreground. */
+export const tick = <S extends AppData>(state: S, now: number): S => {
+  let s = rollover(state, now);
+  for (const [routineId, run] of Object.entries(s.runs)) {
+    const routine = s.routines.find((r) => r.id === routineId);
+    if (routine) s = withRun(s, routineId, advance(routine, run, now));
+  }
+  return s;
+};
+
+/** Creates today's run on first open (starting the first step if it is a max step); reopening keeps it. */
 export const openRoutine = <S extends AppData>(state: S, routineId: string, now: number): S => {
   const s = rollover(state, now);
-  if (s.timers[routineId]) return s;
-  return withTimer(s, routineId, { start: now, stepStart: now, run: null });
+  const routine = s.routines.find((r) => r.id === routineId);
+  if (!routine) return s;
+  const run = s.runs[routineId] ?? { openedAt: now, steps: {} };
+  return withRun(s, routineId, advance(routine, run, now));
+};
+
+/** Applies `fn` to the routine's run after bringing it up to `now`. */
+const updateRun = <S extends AppData>(
+  state: S,
+  routineId: string,
+  now: number,
+  fn: (routine: Routine, run: RoutineRun) => RoutineRun,
+): S => {
+  const s = openRoutine(state, routineId, now);
+  const routine = s.routines.find((r) => r.id === routineId);
+  const run = s.runs[routineId];
+  return routine && run ? withRun(s, routineId, fn(routine, run)) : s;
 };
 
 /**
  * Tap on a step row.
- * - max step: toggles done; restarts the current-step countdown.
- * - exact step, not done: starts it (ignored if it is already running — it can't finish early).
- * - exact step, done: un-does it (the next tap starts it again).
+ * - Focus mode (an exact step started and not done, running or paused): every tap is ignored.
+ * - max step, not done: completes it; the next step becomes current.
+ * - max step, done: un-does it; it resumes with the time it had left.
+ * - exact step, not done: starts it (enters focus mode).
+ * - exact step, done: resets it to its full time (shown with a reload icon).
  */
 export const toggleStep = <S extends AppData>(
   state: S,
   routineId: string,
   stepId: string,
   now: number,
-): S => {
-  const s = resolveExpiredRuns(openRoutine(state, routineId, now), now);
-  const routine = s.routines.find((r) => r.id === routineId);
-  const step = routine?.steps.find((x) => x.id === stepId);
-  if (!routine || !step) return s;
+): S =>
+  updateRun(state, routineId, now, (routine, run) => {
+    const step = routine.steps.find((x) => x.id === stepId);
+    if (!step || focusStep(routine, run)) return run;
+    const sr = stepRunOf(run, stepId);
 
-  const done = s.progress[routineId] ?? [];
-  const timer = s.timers[routineId];
-  const isDone = done.includes(stepId);
+    let next: StepRun;
+    if (isDone(sr)) next = step.mode === 'exact' ? IDLE_STEP : { ...sr, doneAt: null };
+    else next = step.mode === 'exact' ? startStep(sr, now) : completeStep(sr, now);
 
-  if (step.mode === 'exact' && !isDone) {
-    if (timer.run?.stepId === stepId) return s;
-    return withTimer(s, routineId, { ...timer, run: { stepId, start: now } });
-  }
+    return settle(routine, withStep(run, stepId, next), now);
+  });
 
-  const next = isDone ? done.filter((id) => id !== stepId) : [...done, stepId];
-  return {
-    ...withTimer(s, routineId, { ...timer, stepStart: now }),
-    progress: { ...s.progress, [routineId]: next },
-  };
-};
+/** Focus-mode ⏸ Pause. The step keeps its used time and focus mode stays on. */
+export const pauseStep = <S extends AppData>(state: S, routineId: string, now: number): S =>
+  updateRun(state, routineId, now, (routine, run) => {
+    const focus = focusStep(routine, run);
+    const sr = focus && stepRunOf(run, focus.id);
+    return focus && sr && isRunning(sr) ? withStep(run, focus.id, pauseStepRun(sr, now)) : run;
+  });
 
-/**
- * Marks exact steps whose time has elapsed as done, for every routine.
- * The next step's countdown starts at the moment the exact step actually ended,
- * not when this happens to run (the app may have been in the background).
- */
-export const resolveExpiredRuns = <S extends AppData>(state: S, now: number): S => {
-  let next = state;
-  for (const [routineId, timer] of Object.entries(state.timers)) {
-    const routine = state.routines.find((r) => r.id === routineId);
-    const endsAt = routine && runEndsAt(routine, timer);
-    if (!timer.run) continue;
-    if (endsAt === undefined) {
-      // The running step was deleted from the routine.
-      next = withTimer(next, routineId, { ...timer, run: null });
-      continue;
-    }
-    if (endsAt > now) continue;
-    const done = next.progress[routineId] ?? [];
-    next = {
-      ...withTimer(next, routineId, { ...timer, run: null, stepStart: endsAt }),
-      progress: {
-        ...next.progress,
-        [routineId]: done.includes(timer.run.stepId) ? done : [...done, timer.run.stepId],
-      },
-    };
-  }
-  return next;
-};
+/** Focus-mode ▶ Resume: continues with the step's total time minus what it already used. */
+export const resumeStep = <S extends AppData>(state: S, routineId: string, now: number): S =>
+  updateRun(state, routineId, now, (routine, run) => {
+    const focus = focusStep(routine, run);
+    const sr = focus && stepRunOf(run, focus.id);
+    return focus && sr && !isRunning(sr) ? withStep(run, focus.id, startStep(sr, now)) : run;
+  });
 
-/** "I'm finished" — always allowed; records today's result for the routine. */
+/** "I'm finished": always allowed; records today's result for the routine. */
 export const finishRoutine = <S extends AppData>(state: S, routineId: string, now: number): S => {
-  const s = resolveExpiredRuns(rollover(state, now), now);
+  const s = tick(state, now);
   const routine = s.routines.find((r) => r.id === routineId);
   if (!routine) return s;
-  const { done, total, pct } = completion(routine, s.progress);
-  const timer = s.timers[routineId];
+  const run = s.runs[routineId];
+  const { done, total, pct } = completion(routine, run);
   return {
     ...s,
     results: {
       ...s.results,
       [routineId]: {
         rating: rate(pct, s.settings.regularMin),
-        done,
-        total,
-        at: now,
-        secs: timer ? Math.round((now - timer.start) / 1000) : 0,
+        doneSteps: done,
+        totalSteps: total,
+        finishedAt: now,
+        secs: run ? Math.round((now - run.openedAt) / 1000) : 0,
       },
     },
   };
@@ -123,6 +139,6 @@ export const resetToday = <S extends AppData>(state: S, now: number): S => ({
 export const missedSteps = (state: AppData, routineId: string) => {
   const routine = state.routines.find((r) => r.id === routineId);
   if (!routine) return [];
-  const done = doneStepIds(routine, state.progress);
-  return routine.steps.filter((s) => !done.includes(s.id));
+  const run = state.runs[routineId];
+  return routine.steps.filter((s) => !isDone(stepRunOf(run, s.id)));
 };

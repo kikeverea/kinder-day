@@ -26,22 +26,36 @@ export type Rating = 'good' | 'regular' | 'bad';
 
 export type RoutineResult = {
   rating: Rating;
-  done: number;
-  total: number;
-  /** epoch ms */
-  at: number;
-  /** seconds since the routine was opened */
+  /** Steps checked off when the routine was finished (0…totalSteps). */
+  doneSteps: number;
+  totalSteps: number;
+  finishedAt: number;
+  /** Seconds since the routine was opened. */
   secs: number;
 };
 
-/** All timestamps are epoch ms — never store counters, so timers survive leaving the screen or app. */
-export type RoutineTimer = {
-  /** When the routine was first opened today (drives the "All steps" countdown). */
-  start: number;
-  /** When the current max-mode step's countdown began (reset on every toggle). */
-  stepStart: number;
-  /** The exact-mode step currently running, if any. */
-  run: { stepId: string; start: number } | null;
+/**
+ * One step's own timer. Timestamps are epoch ms and named `…At`; never store counters,
+ * so timers stay correct while the screen or app is closed.
+ *
+ * Time used = `consumedMs` + (`startedAt` ? now − startedAt : 0).
+ * Pausing folds the current stretch into `consumedMs`; resuming sets a new `startedAt`.
+ */
+export type StepRun = {
+  /** Time used in earlier, finished running stretches. */
+  consumedMs: number;
+  /** When the current running stretch began; null when idle or paused. */
+  startedAt: number | null;
+  /** When the step was completed; null while not done. */
+  doneAt: number | null;
+};
+
+/** A routine's activity today. At most one of its steps is running at any moment. */
+export type RoutineRun = {
+  /** When the routine was first opened today. */
+  openedAt: number;
+  /** stepId → that step's timer. Steps never touched have no entry. */
+  steps: Record<string, StepRun>;
 };
 
 export type Settings = {
@@ -55,10 +69,9 @@ export type Settings = {
 export type TodayData = {
   /** Local date, YYYY-MM-DD. */
   dayKey: string;
-  /** routineId → done step ids */
-  progress: Record<string, string[]>;
+  /** routineId → today's run */
+  runs: Record<string, RoutineRun>;
   results: Record<string, RoutineResult>;
-  timers: Record<string, RoutineTimer>;
 };
 
 export type AppData = TodayData & {

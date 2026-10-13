@@ -1,70 +1,122 @@
-import type { Routine, RoutineTimer, Step } from './types';
+/** Derived, display-ready timer values for the checklist screen. */
+import { currentStep, focusStep } from './routine-run';
+import { isDone, isRunning, isStarted, leftMs, stepRunOf, stepTotalMs, usedMs } from './step-run';
+import type { Routine, RoutineRun, Step } from './types';
 
-const stepSecs = (step: Step) => step.mins * 60;
+const toSecs = (ms: number) => Math.round(ms / 1000);
 
-/** The exact step currently running (and not yet done), if any. */
-export const runningStep = (routine: Routine, timer: RoutineTimer | undefined, done: string[]) => {
-  if (!timer?.run) return undefined;
-  const id = timer.run.stepId;
-  return done.includes(id) ? undefined : routine.steps.find((s) => s.id === id);
-};
-
-/** "Current step" = the running exact step, else the first step not done. */
-export const currentStep = (routine: Routine, timer: RoutineTimer | undefined, done: string[]) =>
-  runningStep(routine, timer, done) ?? routine.steps.find((s) => !done.includes(s.id));
-
-export type StepCountdown = {
+export type TimerCard = {
   step: Step;
-  /** Seconds left; negative only for a max step that ran over. */
+  /** Seconds left; negative when a max step ran over. */
   left: number;
   /** 0–1 ring fill. */
   fraction: number;
-  state: 'max-running' | 'max-overtime' | 'exact-idle' | 'exact-running';
+  /** running = max step counting down; overtime = max step past its time (shows 😬); waiting = exact step not started. */
+  state: 'running' | 'overtime' | 'waiting';
 };
 
-export const stepCountdown = (
+/** The small timer card above the list. Undefined in focus mode or when everything is done. */
+export const timerCard = (
   routine: Routine,
-  timer: RoutineTimer | undefined,
-  done: string[],
+  run: RoutineRun | undefined,
   now: number,
-): StepCountdown | undefined => {
-  const step = currentStep(routine, timer, done);
+): TimerCard | undefined => {
+  if (focusStep(routine, run)) return undefined;
+  const step = currentStep(routine, run);
   if (!step) return undefined;
-  const total = stepSecs(step);
-
-  if (step.mode === 'exact') {
-    const running = timer?.run?.stepId === step.id;
-    const left = running
-      ? Math.max(0, Math.round(total - (now - timer!.run!.start) / 1000))
-      : total;
-    return { step, left, fraction: left / total, state: running ? 'exact-running' : 'exact-idle' };
-  }
-
-  const left = timer ? Math.round(total - (now - timer.stepStart) / 1000) : total;
+  const total = stepTotalMs(step);
+  if (step.mode === 'exact') return { step, left: toSecs(total), fraction: 1, state: 'waiting' };
+  const left = leftMs(step, stepRunOf(run, step.id), now);
   return {
     step,
-    left,
+    left: toSecs(left),
     fraction: Math.max(0, left) / total,
-    state: left <= 0 ? 'max-overtime' : 'max-running',
+    state: left <= 0 ? 'overtime' : 'running',
   };
 };
 
-/** Seconds left for the whole routine since it was opened; negative when over time. */
-export const totalLeft = (routine: Routine, timer: RoutineTimer | undefined, now: number) => {
-  const total = routine.steps.reduce((sum, s) => sum + stepSecs(s), 0);
-  return timer ? Math.round(total - (now - timer.start) / 1000) : total;
+/**
+ * "⏱️ All steps": total step time minus time used by every step, so idle time between
+ * steps doesn't count. Negative when over time (shown as "+m:ss").
+ */
+export const totalLeft = (routine: Routine, run: RoutineRun | undefined, now: number) =>
+  toSecs(
+    routine.steps.reduce(
+      (sum, s) => sum + stepTotalMs(s) - usedMs(stepRunOf(run, s.id), now),
+      0,
+    ),
+  );
+
+export type StepRow = {
+  status: 'idle' | 'running' | 'paused' | 'done';
+  /** Seconds left; negative when a max step ran over. */
+  left: number;
+  /** 0–1 time used, for the exact step's progress fill. */
+  usedFraction: number;
+  /** Max step past its time: shows 😬. */
+  overtime: boolean;
+  /** Done exact step: tapping resets it to full time (reload icon). */
+  resettable: boolean;
 };
 
-/** Elapsed fraction (0–1) of a running exact step, for the row's progress fill. */
-export const exactElapsed = (step: Step, timer: RoutineTimer | undefined, now: number) => {
-  if (timer?.run?.stepId !== step.id) return 0;
-  const total = stepSecs(step);
-  return Math.min(1, Math.floor((now - timer.run.start) / 1000) / total);
+export const stepRow = (step: Step, run: RoutineRun | undefined, now: number): StepRow => {
+  const sr = stepRunOf(run, step.id);
+  const total = stepTotalMs(step);
+  const left = leftMs(step, sr, now);
+  const done = isDone(sr);
+  return {
+    status: done ? 'done' : isRunning(sr) ? 'running' : isStarted(sr) ? 'paused' : 'idle',
+    left: toSecs(left),
+    usedFraction: Math.min(1, usedMs(sr, now) / total),
+    overtime: !done && step.mode === 'max' && left <= 0 && isStarted(sr),
+    resettable: done && step.mode === 'exact',
+  };
 };
 
-/** When a running exact step will finish (epoch ms), if one is running. */
-export const runEndsAt = (routine: Routine, timer: RoutineTimer | undefined) => {
-  if (!timer?.run) return undefined;
-  const step = routine.steps.find((s) => s.id === timer.run!.stepId);
-  return step ? timer.run.start + stepSecs(step) * 1000 : undefined;
+/** Focus-mode encouragement line, by fraction of time remaining. */
+export const cheerFor = (fraction: number) =>
+  fraction > 0.66
+    ? 'Nice and slow 🐢'
+    : fraction > 0.33
+      ? "You're doing great!"
+      : fraction > 0.1
+        ? 'Almost there…'
+        : 'Last few seconds! ✨';
+
+export type FocusState = {
+  step: Step;
+  /** 1-based position in the routine ("Step 3 of 7"). */
+  stepNumber: number;
+  totalSteps: number;
+  /** Seconds left, clamped at 0. */
+  left: number;
+  /** 0–1 time remaining (ring fill). */
+  fraction: number;
+  paused: boolean;
+  cheer: string;
+};
+
+/**
+ * Focus mode is on while an exact step is started and not done, even when paused: the
+ * checklist swaps the step list, timer card and "I'm finished" button for a single focus card.
+ */
+export const focusState = (
+  routine: Routine,
+  run: RoutineRun | undefined,
+  now: number,
+): FocusState | undefined => {
+  const step = focusStep(routine, run);
+  if (!step) return undefined;
+  const sr = stepRunOf(run, step.id);
+  const left = Math.max(0, leftMs(step, sr, now));
+  const fraction = left / stepTotalMs(step);
+  return {
+    step,
+    stepNumber: routine.steps.indexOf(step) + 1,
+    totalSteps: routine.steps.length,
+    left: toSecs(left),
+    fraction,
+    paused: !isRunning(sr),
+    cheer: cheerFor(fraction),
+  };
 };

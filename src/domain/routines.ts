@@ -19,7 +19,7 @@ const omit = <V>(record: Record<string, V>, key: string) => {
   return rest;
 };
 
-/** Removes a routine and every trace of it (day order, today's progress, timers, results). */
+/** Removes a routine and every trace of it (day order, today's run and result). */
 export const deleteRoutine = <S extends AppData>(state: S, routineId: string): S => {
   const dayOrder: AppData['dayOrder'] = {};
   for (const [day, ids] of Object.entries(state.dayOrder)) {
@@ -29,9 +29,8 @@ export const deleteRoutine = <S extends AppData>(state: S, routineId: string): S
     ...state,
     routines: state.routines.filter((r) => r.id !== routineId),
     dayOrder,
-    progress: omit(state.progress, routineId),
+    runs: omit(state.runs, routineId),
     results: omit(state.results, routineId),
-    timers: omit(state.timers, routineId),
   };
 };
 

@@ -18,6 +18,9 @@ export type AppState = AppData & {
   tick(now?: number): void;
   openRoutine(routineId: string, now?: number): void;
   toggleStep(routineId: string, stepId: string, now?: number): void;
+  /** Focus-mode ⏸ Pause / ▶ Resume. */
+  pauseStep(routineId: string, now?: number): void;
+  resumeStep(routineId: string, now?: number): void;
   finishRoutine(routineId: string, now?: number): void;
   resetToday(now?: number): void;
 
@@ -33,7 +36,19 @@ export type AppState = AppData & {
 type PersistedState = AppData;
 
 export const STORAGE_KEY = 'kinder-day.state';
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 3;
+
+/** Upgrades persisted data from older `STORAGE_VERSION`s. */
+export const migrate = (persisted: unknown, version: number): PersistedState => {
+  const state = persisted as PersistedState & Record<string, unknown>;
+  if (version < 3) {
+    // v3: per-step timers (`runs`) replace `progress` + `timers`; results use `finishedAt`.
+    // Today's data is disposable (it resets daily), so drop it rather than convert it.
+    const { progress: _progress, timers: _timers, ...rest } = state;
+    return { ...rest, runs: {}, results: {} } as PersistedState;
+  }
+  return state;
+};
 
 export const createInitialData = (now = Date.now()): AppData => ({
   ...today.emptyToday(now),
@@ -52,12 +67,14 @@ export const createAppStore = (storage: KeyValueStorage) =>
         unlockParent: () => set({ parentUnlocked: true }),
         lockParent: () => set({ parentUnlocked: false }),
 
-        tick: (now = Date.now()) =>
-          set((s) => today.resolveExpiredRuns(today.rollover(s, now), now)),
+        tick: (now = Date.now()) => set((s) => today.tick(s, now)),
         openRoutine: (routineId, now = Date.now()) =>
           set((s) => today.openRoutine(s, routineId, now)),
         toggleStep: (routineId, stepId, now = Date.now()) =>
           set((s) => today.toggleStep(s, routineId, stepId, now)),
+        pauseStep: (routineId, now = Date.now()) => set((s) => today.pauseStep(s, routineId, now)),
+        resumeStep: (routineId, now = Date.now()) =>
+          set((s) => today.resumeStep(s, routineId, now)),
         finishRoutine: (routineId, now = Date.now()) =>
           set((s) => today.finishRoutine(s, routineId, now)),
         resetToday: (now = Date.now()) => set((s) => today.resetToday(s, now)),
@@ -75,12 +92,12 @@ export const createAppStore = (storage: KeyValueStorage) =>
       {
         name: STORAGE_KEY,
         version: STORAGE_VERSION,
+        migrate,
         storage: createJSONStorage<PersistedState>(() => storage),
-        partialize: ({ dayKey, progress, results, timers, routines, dayOrder, settings }) => ({
+        partialize: ({ dayKey, runs, results, routines, dayOrder, settings }) => ({
           dayKey,
-          progress,
+          runs,
           results,
-          timers,
           routines,
           dayOrder,
           settings,

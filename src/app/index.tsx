@@ -13,7 +13,7 @@ import { colors, fonts, spacing, sticker } from '@/theme/tokens';
 export default function KidHome() {
   const routines = useAppStore((s) => s.routines);
   const dayOrder = useAppStore((s) => s.dayOrder);
-  const progress = useAppStore((s) => s.progress);
+  const runs = useAppStore((s) => s.runs);
   const kidName = useAppStore((s) => s.settings.kidName);
 
   const now = useNow();
@@ -28,7 +28,7 @@ export default function KidHome() {
           {kidName}! {hello.emoji}
         </Text>
         {todays.map((r) => {
-          const { done, total } = completion(r, progress);
+          const { done, total } = completion(r, runs[r.id]);
           return (
             <View key={r.id} style={[styles.card, { backgroundColor: r.color }]}>
               <Text style={styles.cardTitle}>

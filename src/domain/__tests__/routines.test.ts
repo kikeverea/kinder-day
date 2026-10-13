@@ -24,9 +24,8 @@ it('deleteRoutine removes all traces', () => {
   const next = deleteRoutine(s, 'morning');
   expect(next.routines.map((r) => r.id)).toEqual(['school']);
   expect(next.dayOrder).toEqual({ 1: ['school'], 2: [] });
-  expect(next.progress).toEqual({});
+  expect(next.runs).toEqual({});
   expect(next.results).toEqual({});
-  expect(next.timers).toEqual({});
 });
 
 it('removeRoutineFromDay unschedules only that day', () => {

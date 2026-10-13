@@ -34,19 +34,41 @@ it('rehydrates synchronously from storage', () => {
 });
 
 it("drops yesterday's progress when rehydrating on a new day", () => {
-  const yesterday = { ...createInitialData(Date.now() - 24 * 60 * 60_000), progress: { morning: ['x'] } };
+  const yesterday = {
+    ...createInitialData(Date.now() - 24 * 60 * 60_000),
+    runs: { morning: { openedAt: 1, steps: {} } },
+  };
   const storage = createMemoryStorage({
-    [STORAGE_KEY]: JSON.stringify({ state: yesterday, version: 1 }),
+    [STORAGE_KEY]: JSON.stringify({ state: yesterday, version: 3 }),
   });
   const store = createAppStore(storage);
-  expect(store.getState().progress).toEqual({});
+  expect(store.getState().runs).toEqual({});
 });
 
 it('fills in settings added after the data was saved', () => {
   const old = createInitialData(Date.now());
   const { confetti: _dropped, ...oldSettings } = old.settings;
   const storage = createMemoryStorage({
-    [STORAGE_KEY]: JSON.stringify({ state: { ...old, settings: oldSettings }, version: 1 }),
+    [STORAGE_KEY]: JSON.stringify({ state: { ...old, settings: oldSettings }, version: 3 }),
   });
   expect(createAppStore(storage).getState().settings.confetti).toBe(true);
+});
+
+it('drops pre-v3 today data but keeps routines and settings', () => {
+  const v2 = {
+    ...createInitialData(Date.now()),
+    progress: { morning: ['x'] },
+    timers: { morning: { start: 1, stepStart: 1, run: null } },
+    results: { morning: { rating: 'regular', doneSteps: 4, total: 7, at: 1, secs: 300 } },
+    settings: { kidName: 'Sami', regularMin: 50, confetti: true },
+  };
+  const storage = createMemoryStorage({
+    [STORAGE_KEY]: JSON.stringify({ state: v2, version: 2 }),
+  });
+  const state = createAppStore(storage).getState();
+  expect(state.runs).toEqual({});
+  expect(state.results).toEqual({});
+  expect(state).not.toHaveProperty('progress');
+  expect(state).not.toHaveProperty('timers');
+  expect(state.settings.kidName).toBe('Sami');
 });

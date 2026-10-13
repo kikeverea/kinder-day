@@ -1,13 +1,12 @@
-import type { Rating, Routine } from './types';
+import { isDone, stepRunOf } from './step-run';
+import type { Rating, Routine, RoutineRun } from './types';
 
-/** Done ids that still exist in the routine (steps may have been edited since). */
-export const doneStepIds = (routine: Routine, progress: Record<string, string[]>) => {
-  const ids = progress[routine.id] ?? [];
-  return ids.filter((id) => routine.steps.some((s) => s.id === id));
-};
+/** Ids of the routine's steps that are done (entries for deleted steps are ignored). */
+export const doneStepIds = (routine: Routine, run: RoutineRun | undefined) =>
+  routine.steps.filter((s) => isDone(stepRunOf(run, s.id))).map((s) => s.id);
 
-export const completion = (routine: Routine, progress: Record<string, string[]>) => {
-  const done = doneStepIds(routine, progress).length;
+export const completion = (routine: Routine, run: RoutineRun | undefined) => {
+  const done = doneStepIds(routine, run).length;
   const total = routine.steps.length;
   return { done, total, left: total - done, pct: total ? Math.round((done / total) * 100) : 0 };
 };
