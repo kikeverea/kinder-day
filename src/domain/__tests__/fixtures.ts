@@ -34,5 +34,6 @@ export const makeState = (overrides: Partial<AppData> = {}): AppData => ({
   routines: [morning, school],
   dayOrder: {},
   settings: DEFAULT_SETTINGS,
+  history: {},
   ...overrides,
 });

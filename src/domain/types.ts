@@ -83,9 +83,29 @@ export type TodayData = {
   results: Record<string, RoutineResult>;
 };
 
+/** A routine as it was on a past day (it may have been edited or deleted since). */
+export type PastRoutine = {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  doneSteps: number;
+  totalSteps: number;
+  /** Null when the routine wasn't finished that day. */
+  result: RoutineResult | null;
+};
+
+/** What a past day looked like, archived when the day rolls over. */
+export type DayRecord = {
+  dayKey: string;
+  routines: PastRoutine[];
+};
+
 export type AppData = TodayData & {
   routines: Routine[];
   /** Per-weekday routine order. Routines missing from a list sort after it, in creation order. */
   dayOrder: Partial<Record<DayOfWeek, string[]>>;
   settings: Settings;
+  /** dayKey → archived past day (newest `HISTORY_DAYS` kept). */
+  history: Record<string, DayRecord>;
 };

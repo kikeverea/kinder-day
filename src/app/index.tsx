@@ -1,15 +1,17 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
+import { DaySwitcher } from '@/components/kid/day-switcher';
 import { LockButton } from '@/components/kid/lock-button';
 import { RoutineCard } from '@/components/kid/routine-card';
 import { FACE_EMOJI } from '@/domain/constants';
-import { dayOfWeek } from '@/domain/day';
+import { dayKey, dayKeyToTime, dayOfWeek, shiftDay } from '@/domain/day';
 import { dateLabel, greeting } from '@/domain/format';
+import { oldestDay } from '@/domain/history';
 import { completion, resultFace } from '@/domain/progress';
 import { isRoutineRunning } from '@/domain/routine-run';
 import { routinesForDay } from '@/domain/schedule';
@@ -22,6 +24,7 @@ export default function KidHome() {
   const dayOrder = useAppStore((s) => s.dayOrder);
   const runs = useAppStore((s) => s.runs);
   const results = useAppStore((s) => s.results);
+  const history = useAppStore((s) => s.history);
   const kidName = useAppStore((s) => s.settings.kidName);
   const parentUnlocked = useAppStore((s) => s.parentUnlocked);
   const unlockParent = useAppStore((s) => s.unlockParent);
@@ -31,7 +34,37 @@ export default function KidHome() {
   const { width } = useWindowDimensions();
   const cardWidth = (width - spacing.screenX * 2 - spacing.gridColGap) / 2;
   const hello = greeting(new Date(now).getHours());
-  const todays = routinesForDay(routines, dayOrder, dayOfWeek(now));
+  const todayKey = dayKey(now);
+  // null = today (live); otherwise a past dayKey from history.
+  const [pastDay, setPastDay] = useState<string | null>(null);
+  const shownKey = pastDay ?? todayKey;
+  const oldest = oldestDay(history);
+  const showDay = (key: string) => setPastDay(key >= todayKey ? null : key);
+
+  // Today: live routines. Past day: the archived snapshot (read-only).
+  const tiles = pastDay
+    ? (history[pastDay]?.routines ?? []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        emoji: r.emoji,
+        color: r.color,
+        countLabel: `${r.doneSteps} of ${r.totalSteps}`,
+        badge: r.result ? FACE_EMOJI[resultFace(r.result)] : undefined,
+        running: false,
+      }))
+    : routinesForDay(routines, dayOrder, dayOfWeek(now)).map((r) => {
+        const { done, total } = completion(r, runs[r.id]);
+        const result = results[r.id];
+        return {
+          id: r.id,
+          name: r.name,
+          emoji: r.emoji,
+          color: r.color,
+          countLabel: `${done} of ${total}`,
+          badge: result ? FACE_EMOJI[resultFace(result)] : undefined,
+          running: isRoutineRunning(runs[r.id]),
+        };
+      });
 
   // Coming back to Kid Home always re-locks the grown-ups area.
   useFocusEffect(
@@ -60,18 +93,27 @@ export default function KidHome() {
           <LockButton onUnlock={unlockParent} />
         </View>
 
-        <View style={styles.date}>
-          <View style={styles.dateIcon}>
-            <Emoji size={18}>📅</Emoji>
-          </View>
-          <AppText size={17}>{dateLabel(now)}</AppText>
-        </View>
+        <DaySwitcher
+          label={dateLabel(pastDay ? dayKeyToTime(pastDay) : now)}
+          isToday={!pastDay}
+          canGoBack={!!oldest && oldest < shownKey}
+          onBack={() => showDay(shiftDay(shownKey, -1))}
+          onForward={() => showDay(shiftDay(shownKey, 1))}
+          onToday={() => setPastDay(null)}
+        />
 
         <AppText size={24} weight="semibold">
-          What are we doing now?
+          {pastDay ? 'What did we do?' : 'What are we doing now?'}
         </AppText>
 
-        {todays.length === 0 ? (
+        {tiles.length === 0 && pastDay ? (
+          <View style={styles.empty}>
+            <Emoji size={56}>🗓️</Emoji>
+            <AppText size={22} weight="semibold">
+              Nothing saved this day
+            </AppText>
+          </View>
+        ) : tiles.length === 0 ? (
           <View style={styles.empty}>
             <Emoji size={56}>🎈</Emoji>
             <AppText size={22} weight="semibold">
@@ -83,23 +125,23 @@ export default function KidHome() {
           </View>
         ) : (
           <View style={styles.grid}>
-            {todays.map((r) => {
-              const { done, total } = completion(r, runs[r.id]);
-              const result = results[r.id];
-              return (
-                <RoutineCard
-                  key={r.id}
-                  name={r.name}
-                  emoji={r.emoji}
-                  color={r.color}
-                  countLabel={`${done} of ${total}`}
-                  badge={result ? FACE_EMOJI[resultFace(result)] : undefined}
-                  running={isRoutineRunning(runs[r.id])}
-                  width={cardWidth}
-                  onPress={() => router.push({ pathname: '/routine/[id]', params: { id: r.id } })}
-                />
-              );
-            })}
+            {tiles.map((t) => (
+              <RoutineCard
+                key={t.id}
+                name={t.name}
+                emoji={t.emoji}
+                color={t.color}
+                countLabel={t.countLabel}
+                badge={t.badge}
+                running={t.running}
+                width={cardWidth}
+                onPress={
+                  pastDay
+                    ? undefined
+                    : () => router.push({ pathname: '/routine/[id]', params: { id: t.id } })
+                }
+              />
+            ))}
           </View>
         )}
       </ScrollView>
@@ -113,27 +155,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   hello: { flex: 1, gap: 2 },
   name: { lineHeight: 50 },
-  date: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.white,
-    borderWidth: sticker.border,
-    borderColor: colors.ink,
-    borderRadius: 99,
-    paddingVertical: 6,
-    paddingLeft: 8,
-    paddingRight: 16,
-  },
-  dateIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.lock,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   empty: {
     alignItems: 'center',
     gap: 8,

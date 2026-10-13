@@ -3,6 +3,7 @@
  * Every function takes `now` explicitly so behaviour is deterministic and testable.
  */
 import { dayKey } from './day';
+import { archiveDay, pruneHistory } from './history';
 import { completion, rate } from './progress';
 import { advance, focusStep, settle } from './routine-run';
 import {
@@ -23,9 +24,17 @@ export const emptyToday = (now: number): TodayData => ({
   results: {},
 });
 
-/** Clears today's data if the calendar day changed. Returns the same object when nothing changed. */
-export const rollover = <S extends AppData>(state: S, now: number): S =>
-  state.dayKey === dayKey(now) ? state : { ...state, ...emptyToday(now) };
+/**
+ * On a new calendar day: archives the finished day into `history`, then clears today's data.
+ * Returns the same object when the day hasn't changed.
+ */
+export const rollover = <S extends AppData>(state: S, now: number): S => {
+  const key = dayKey(now);
+  if (state.dayKey === key) return state;
+  const record = archiveDay(state);
+  const history = record ? { ...state.history, [record.dayKey]: record } : state.history;
+  return { ...state, ...emptyToday(now), history: pruneHistory(history, key) };
+};
 
 const withRun = <S extends AppData>(state: S, routineId: string, run: RoutineRun): S =>
   state.runs[routineId] === run ? state : { ...state, runs: { ...state.runs, [routineId]: run } };

@@ -38,7 +38,7 @@ export type AppState = AppData & {
 type PersistedState = AppData;
 
 export const STORAGE_KEY = 'kinder-day.state';
-const STORAGE_VERSION = 6;
+const STORAGE_VERSION = 7;
 
 /** Upgrades persisted data from older `STORAGE_VERSION`s. Steps run in order. */
 export const migrate = (persisted: unknown, version: number): PersistedState => {
@@ -77,6 +77,10 @@ export const migrate = (persisted: unknown, version: number): PersistedState => 
     }
     state = { ...state, results };
   }
+  if (version < 7) {
+    // v7: archived past days.
+    state = { ...state, history: state.history ?? {} };
+  }
   return state;
 };
 
@@ -85,6 +89,7 @@ export const createInitialData = (now = Date.now()): AppData => ({
   routines: createSeedRoutines(),
   dayOrder: {},
   settings: DEFAULT_SETTINGS,
+  history: {},
 });
 
 export const createAppStore = (storage: KeyValueStorage) =>
@@ -140,13 +145,14 @@ export const createAppStore = (storage: KeyValueStorage) =>
         version: STORAGE_VERSION,
         migrate,
         storage: createJSONStorage<PersistedState>(() => storage),
-        partialize: ({ dayKey, runs, results, routines, dayOrder, settings }) => ({
+        partialize: ({ dayKey, runs, results, routines, dayOrder, settings, history }) => ({
           dayKey,
           runs,
           results,
           routines,
           dayOrder,
           settings,
+          history,
         }),
         merge: (persisted, current) => {
           const saved = persisted as Partial<PersistedState> | undefined;

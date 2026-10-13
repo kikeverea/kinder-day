@@ -17,13 +17,15 @@ type Props = {
   /** A step's timer is ticking: shows a timer badge. */
   running?: boolean;
   width: number;
-  onPress: () => void;
+  /** Omitted for read-only tiles (past days). */
+  onPress?: () => void;
 };
 
 export function RoutineCard({ name, emoji, color, countLabel, badge, running, width, onPress }: Props) {
   return (
     <StickerPressable
       onPress={onPress}
+      disabled={!onPress}
       accessibilityLabel={`${name}, ${countLabel}${running ? ', in progress' : ''}`}
       style={{ width }}
       faceStyle={[styles.face, { backgroundColor: color }]}>

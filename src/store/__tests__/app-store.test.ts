@@ -39,7 +39,7 @@ it("drops yesterday's progress when rehydrating on a new day", () => {
     runs: { morning: { openedAt: 1, steps: {} } },
   };
   const storage = createMemoryStorage({
-    [STORAGE_KEY]: JSON.stringify({ state: yesterday, version: 6 }),
+    [STORAGE_KEY]: JSON.stringify({ state: yesterday, version: 7 }),
   });
   const store = createAppStore(storage);
   expect(store.getState().runs).toEqual({});
@@ -49,7 +49,7 @@ it('fills in settings added after the data was saved', () => {
   const old = createInitialData(Date.now());
   const { confetti: _dropped, ...oldSettings } = old.settings;
   const storage = createMemoryStorage({
-    [STORAGE_KEY]: JSON.stringify({ state: { ...old, settings: oldSettings }, version: 6 }),
+    [STORAGE_KEY]: JSON.stringify({ state: { ...old, settings: oldSettings }, version: 7 }),
   });
   expect(createAppStore(storage).getState().settings.confetti).toBe(true);
 });
@@ -125,4 +125,10 @@ it('migrates v5 results: faceOverride defaults to null', () => {
   };
   const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v5, version: 5 }) });
   expect(createAppStore(storage).getState().results.bed.faceOverride).toBeNull();
+});
+
+it('migrates v6: adds an empty history', () => {
+  const { history: _h, ...v6 } = createInitialData(Date.now());
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v6, version: 6 }) });
+  expect(createAppStore(storage).getState().history).toEqual({});
 });
