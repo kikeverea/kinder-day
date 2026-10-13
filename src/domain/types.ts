@@ -24,6 +24,9 @@ export type Routine = {
 
 export type Rating = 'good' | 'regular' | 'bad';
 
+/** Faces a result can show: the three ratings plus parent-only extremes. */
+export type ResultFace = 'angry' | Rating | 'unicorn';
+
 export type RoutineResult = {
   rating: Rating;
   /** Steps checked off when the routine was finished (0…totalSteps). */
@@ -34,6 +37,8 @@ export type RoutineResult = {
   secs: number;
   /** Seconds over the routine's total time when finished (0 when on time). */
   overtimeSecs: number;
+  /** Face picked by a grown-up; null shows the face for `rating`. */
+  faceOverride: ResultFace | null;
 };
 
 /**

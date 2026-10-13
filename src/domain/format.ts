@@ -89,3 +89,27 @@ export const resultSubtitle = (result: RoutineResult) => {
 export const resultSummary = (result: RoutineResult) =>
   `${result.doneSteps} of ${result.totalSteps} steps` +
   (result.secs ? ` · ${Math.max(1, Math.round(result.secs / 60))} min` : '');
+
+/** Routines list: "7 steps · 21 min · ⏰ 🚽 🪥 👕" */
+export const routineSummary = (routine: Routine) =>
+  `${plural(routine.steps.length, 'step')} · ${routineMinutes(routine)} min · ` +
+  routine.steps
+    .slice(0, 4)
+    .map((s) => s.emoji)
+    .join(' ');
+
+/** Editor steps header: "7 steps · 21 min total" */
+export const stepsTotalLabel = (routine: Pick<Routine, 'steps'>) =>
+  `${plural(routine.steps.length, 'step')} · ${routineMinutes(routine)} min total`;
+
+/** Parent "Today" status line. */
+export const todayStatus = (opened: boolean, result: RoutineResult | undefined) =>
+  result
+    ? `Finished at ${clockTime(result.finishedAt)} · ${result.doneSteps}/${result.totalSteps} steps`
+    : opened
+      ? 'In progress'
+      : 'Not started yet';
+
+/** Week planner row: "7 steps · 21 min · Every day" */
+export const plannerSummary = (routine: Routine) =>
+  `${plural(routine.steps.length, 'step')} · ${routineMinutes(routine)} min · ${daysLabel(routine.days)}`;

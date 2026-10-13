@@ -1,5 +1,5 @@
 import { isDone, stepRunOf } from './step-run';
-import type { Rating, Routine, RoutineRun } from './types';
+import type { Rating, ResultFace, Routine, RoutineResult, RoutineRun } from './types';
 
 /** Ids of the routine's steps that are done (entries for deleted steps are ignored). */
 export const doneStepIds = (routine: Routine, run: RoutineRun | undefined) =>
@@ -31,3 +31,6 @@ export const rate = ({
     overtimeSecs <= 0 ? 'good' : overtimeSecs <= graceMins * 60 ? 'regular' : 'bad';
   return byTime === 'good' && !allDone ? 'regular' : byTime;
 };
+
+/** The face a result shows: the grown-up's pick, else the computed rating. */
+export const resultFace = (result: RoutineResult): ResultFace => result.faceOverride ?? result.rating;

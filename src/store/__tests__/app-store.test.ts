@@ -39,7 +39,7 @@ it("drops yesterday's progress when rehydrating on a new day", () => {
     runs: { morning: { openedAt: 1, steps: {} } },
   };
   const storage = createMemoryStorage({
-    [STORAGE_KEY]: JSON.stringify({ state: yesterday, version: 5 }),
+    [STORAGE_KEY]: JSON.stringify({ state: yesterday, version: 6 }),
   });
   const store = createAppStore(storage);
   expect(store.getState().runs).toEqual({});
@@ -49,7 +49,7 @@ it('fills in settings added after the data was saved', () => {
   const old = createInitialData(Date.now());
   const { confetti: _dropped, ...oldSettings } = old.settings;
   const storage = createMemoryStorage({
-    [STORAGE_KEY]: JSON.stringify({ state: { ...old, settings: oldSettings }, version: 5 }),
+    [STORAGE_KEY]: JSON.stringify({ state: { ...old, settings: oldSettings }, version: 6 }),
   });
   expect(createAppStore(storage).getState().settings.confetti).toBe(true);
 });
@@ -113,4 +113,16 @@ it('migrates v4: regularMin → graceMins, results gain overtimeSecs', () => {
   const state = createAppStore(storage).getState();
   expect(state.settings).toEqual({ kidName: 'Sami', graceMins: 5, confetti: false });
   expect(state.results.bed.overtimeSecs).toBe(0);
+});
+
+it('migrates v5 results: faceOverride defaults to null', () => {
+  const now = Date.now();
+  const v5 = {
+    ...createInitialData(now),
+    results: {
+      bed: { rating: 'bad', doneSteps: 5, totalSteps: 5, finishedAt: now, secs: 60, overtimeSecs: 400 },
+    },
+  };
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v5, version: 5 }) });
+  expect(createAppStore(storage).getState().results.bed.faceOverride).toBeNull();
 });

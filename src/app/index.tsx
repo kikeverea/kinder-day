@@ -7,10 +7,10 @@ import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
 import { LockButton } from '@/components/kid/lock-button';
 import { RoutineCard } from '@/components/kid/routine-card';
-import { RESULT_EMOJI } from '@/domain/constants';
+import { FACE_EMOJI } from '@/domain/constants';
 import { dayOfWeek } from '@/domain/day';
 import { dateLabel, greeting } from '@/domain/format';
-import { completion } from '@/domain/progress';
+import { completion, resultFace } from '@/domain/progress';
 import { isRoutineRunning } from '@/domain/routine-run';
 import { routinesForDay } from '@/domain/schedule';
 import { useNow } from '@/hooks/use-now';
@@ -93,7 +93,7 @@ export default function KidHome() {
                   emoji={r.emoji}
                   color={r.color}
                   countLabel={`${done} of ${total}`}
-                  badge={result ? RESULT_EMOJI[result.rating] : undefined}
+                  badge={result ? FACE_EMOJI[resultFace(result)] : undefined}
                   running={isRoutineRunning(runs[r.id])}
                   width={cardWidth}
                   onPress={() => router.push({ pathname: '/routine/[id]', params: { id: r.id } })}

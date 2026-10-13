@@ -1,3 +1,4 @@
+import { resultFace } from '../progress';
 import { isRoutineRunning } from '../routine-run';
 import {
   finishRoutine,
@@ -7,6 +8,7 @@ import {
   resetToday,
   resumeStep,
   rollover,
+  setResultFace,
   tick,
   toggleStep,
 } from '../today';
@@ -197,6 +199,7 @@ describe('finishRoutine', () => {
       finishedAt: T0 + min(8),
       secs: 480,
       overtimeSecs: 0,
+      faceOverride: null,
     });
   });
 
@@ -278,5 +281,33 @@ describe('isRoutineRunning', () => {
   it('is false once finished', () => {
     const s = finishRoutine(openRoutine(makeState(), 'morning', T0), 'morning', T0 + min(1));
     expect(isRoutineRunning(s.runs.morning)).toBe(false);
+  });
+});
+
+describe('setResultFace', () => {
+  const finished = () => finishRoutine(atTeeth(), 'morning', T0 + min(4)); // regular
+
+  it("overrides the face shown, keeping the computed rating", () => {
+    const s = setResultFace(finished(), 'morning', 'unicorn');
+    expect(s.results.morning).toMatchObject({ rating: 'regular', faceOverride: 'unicorn' });
+    expect(resultFace(s.results.morning)).toBe('unicorn');
+  });
+
+  it('null restores the computed face', () => {
+    const s = setResultFace(setResultFace(finished(), 'morning', 'angry'), 'morning', null);
+    expect(resultFace(s.results.morning)).toBe('regular');
+  });
+
+  it('is a no-op without a result or when unchanged', () => {
+    const s = atTeeth();
+    expect(setResultFace(s, 'morning', 'angry')).toBe(s);
+    const f = finished();
+    expect(setResultFace(f, 'morning', null)).toBe(f);
+  });
+
+  it('finishing again clears the override', () => {
+    let s = setResultFace(finished(), 'morning', 'unicorn');
+    s = finishRoutine(s, 'morning', T0 + min(5));
+    expect(s.results.morning.faceOverride).toBeNull();
   });
 });

@@ -15,7 +15,7 @@ import {
   stepRunOf,
 } from './step-run';
 import { totalLeft } from './timer';
-import type { AppData, Routine, RoutineRun, StepRun, TodayData } from './types';
+import type { AppData, ResultFace, Routine, RoutineRun, StepRun, TodayData } from './types';
 
 export const emptyToday = (now: number): TodayData => ({
   dayKey: dayKey(now),
@@ -137,9 +137,22 @@ export const finishRoutine = <S extends AppData>(state: S, routineId: string, no
         finishedAt: now,
         secs: run ? Math.round((now - run.openedAt) / 1000) : 0,
         overtimeSecs,
+        // A new finish is a new result: any earlier grown-up pick no longer applies.
+        faceOverride: null,
       },
     },
   };
+};
+
+/** Grown-up override of today's result face (null restores the computed one). No-op without a result. */
+export const setResultFace = <S extends AppData>(
+  state: S,
+  routineId: string,
+  face: ResultFace | null,
+): S => {
+  const result = state.results[routineId];
+  if (!result || result.faceOverride === face) return state;
+  return { ...state, results: { ...state.results, [routineId]: { ...result, faceOverride: face } } };
 };
 
 export const resetToday = <S extends AppData>(state: S, now: number): S => ({

@@ -4,12 +4,16 @@ import {
   daysLabel,
   formatClock,
   greeting,
+  plannerSummary,
   plural,
   progressLabel,
   resultSubtitle,
   resultSummary,
   resultTitle,
   routineMinutes,
+  routineSummary,
+  stepsTotalLabel,
+  todayStatus,
   stepSubtitle,
 } from '../format';
 import { T0, morning } from './fixtures';
@@ -69,7 +73,7 @@ it('stepSubtitle', () => {
 });
 
 describe('result copy', () => {
-  const base = { doneSteps: 7, totalSteps: 7, finishedAt: T0, secs: 600, overtimeSecs: 0 };
+  const base = { doneSteps: 7, totalSteps: 7, finishedAt: T0, secs: 600, overtimeSecs: 0, faceOverride: null };
 
   it('good', () => {
     const r = { ...base, rating: 'good' as const };
@@ -98,8 +102,35 @@ describe('result copy', () => {
 });
 
 it('resultSummary', () => {
-  const r = { rating: 'good' as const, doneSteps: 5, totalSteps: 7, finishedAt: T0, overtimeSecs: 0 };
+  const r = { rating: 'good' as const, doneSteps: 5, totalSteps: 7, finishedAt: T0, overtimeSecs: 0, faceOverride: null };
   expect(resultSummary({ ...r, secs: 720 })).toBe('5 of 7 steps · 12 min');
   expect(resultSummary({ ...r, secs: 20 })).toBe('5 of 7 steps · 1 min');
   expect(resultSummary({ ...r, secs: 0 })).toBe('5 of 7 steps');
+});
+
+it('routine list labels', () => {
+  expect(routineSummary(morning)).toBe('3 steps · 9 min · ⏰ 🪥 👕');
+  expect(stepsTotalLabel(morning)).toBe('3 steps · 9 min total');
+  expect(stepsTotalLabel({ steps: [morning.steps[0]] })).toBe('1 step · 2 min total');
+});
+
+it('todayStatus', () => {
+  expect(todayStatus(false, undefined)).toBe('Not started yet');
+  expect(todayStatus(true, undefined)).toBe('In progress');
+  const finishedAt = new Date(2026, 9, 12, 7, 42).getTime();
+  expect(
+    todayStatus(true, {
+      rating: 'regular',
+      doneSteps: 6,
+      totalSteps: 7,
+      finishedAt,
+      secs: 0,
+      overtimeSecs: 0,
+      faceOverride: null,
+    }),
+  ).toBe('Finished at 7:42 AM · 6/7 steps');
+});
+
+it('plannerSummary', () => {
+  expect(plannerSummary(morning)).toBe('3 steps · 9 min · Every day');
 });

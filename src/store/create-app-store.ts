@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import * as routines from '@/domain/routines';
 import { createSeedRoutines, DEFAULT_SETTINGS } from '@/domain/seed';
 import * as today from '@/domain/today';
-import type { AppData, DayOfWeek, Routine, Settings } from '@/domain/types';
+import type { AppData, DayOfWeek, ResultFace, Routine, Settings } from '@/domain/types';
 import type { KeyValueStorage } from '@/storage/types';
 
 export type AppState = AppData & {
@@ -23,6 +23,8 @@ export type AppState = AppData & {
   resumeStep(routineId: string, now?: number): void;
   finishRoutine(routineId: string, now?: number): void;
   resetToday(now?: number): void;
+  /** Grown-up override of today's result face; null restores the computed one. */
+  setResultFace(routineId: string, face: ResultFace | null): void;
 
   saveRoutine(routine: Routine): void;
   deleteRoutine(routineId: string): void;
@@ -36,7 +38,7 @@ export type AppState = AppData & {
 type PersistedState = AppData;
 
 export const STORAGE_KEY = 'kinder-day.state';
-const STORAGE_VERSION = 5;
+const STORAGE_VERSION = 6;
 
 /** Upgrades persisted data from older `STORAGE_VERSION`s. Steps run in order. */
 export const migrate = (persisted: unknown, version: number): PersistedState => {
@@ -66,6 +68,14 @@ export const migrate = (persisted: unknown, version: number): PersistedState => 
       results[id] = { ...r, overtimeSecs: r.overtimeSecs ?? 0 };
     }
     state = { ...state, settings: settings as Settings, results };
+  }
+  if (version < 6) {
+    // v6: grown-ups can override a result's face.
+    const results: PersistedState['results'] = {};
+    for (const [id, r] of Object.entries(state.results ?? {})) {
+      results[id] = { ...r, faceOverride: r.faceOverride ?? null };
+    }
+    state = { ...state, results };
   }
   return state;
 };
@@ -112,6 +122,7 @@ export const createAppStore = (storage: KeyValueStorage) =>
           finishRoutine: (routineId, now = Date.now()) =>
             apply((s) => today.finishRoutine(s, routineId, now)),
           resetToday: (now = Date.now()) => apply((s) => today.resetToday(s, now)),
+          setResultFace: (routineId, face) => apply((s) => today.setResultFace(s, routineId, face)),
 
           saveRoutine: (routine) => apply((s) => routines.upsertRoutine(s, routine)),
           deleteRoutine: (routineId) => apply((s) => routines.deleteRoutine(s, routineId)),

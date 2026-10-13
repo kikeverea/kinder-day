@@ -44,4 +44,13 @@ export const STEP_MODES: Record<StepMode, { label: string; hint: string }> = {
   },
 };
 
-export const RESULT_EMOJI = { good: '😄', regular: '😶', bad: '😬' } as const;
+export const FACE_EMOJI = {
+  angry: '😡',
+  bad: '😬',
+  regular: '😶',
+  good: '😄',
+  unicorn: '🦄',
+} as const;
+
+/** Order of the grown-ups' face picker. */
+export const FACE_CHOICES = ['angry', 'bad', 'regular', 'good', 'unicorn'] as const;

@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe, useReducedMotion } from 'react-native-reanimated';
 
 import { Emoji } from '@/components/emoji';
-import { RESULT_EMOJI } from '@/domain/constants';
+import { FACE_EMOJI } from '@/domain/constants';
 import type { Rating } from '@/domain/types';
 import { colors } from '@/theme/tokens';
 
@@ -63,7 +63,7 @@ export function ResultEmoji({ rating }: { rating: Rating }) {
     <View style={styles.circle}>
       <Animated.View entering={reduceMotion ? undefined : pop}>
         <Animated.View style={reduceMotion ? undefined : LOOPS[rating]}>
-          <Emoji size={140}>{RESULT_EMOJI[rating]}</Emoji>
+          <Emoji size={140}>{FACE_EMOJI[rating]}</Emoji>
         </Animated.View>
       </Animated.View>
     </View>

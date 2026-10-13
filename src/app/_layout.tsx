@@ -48,6 +48,7 @@ export default function RootLayout() {
         {/* Grown-ups area: unreachable (and dropped from history) unless unlocked from Kid Home. */}
         <Stack.Protected guard={parentUnlocked}>
           <Stack.Screen name="parent/index" options={{ contentStyle: { backgroundColor: colors.parentGround } }} />
+          <Stack.Screen name="parent/edit/[id]" options={{ contentStyle: { backgroundColor: colors.parentGround } }} />
         </Stack.Protected>
       </Stack>
     </GestureHandlerRootView>
