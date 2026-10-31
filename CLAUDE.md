@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Kid Routines**: a child taps through daily routine checklists (Morning, After school, Bedtime…) with timers and a result screen; a parent, behind a press-and-hold lock, manages routines and the weekly plan. Expo SDK 57, React Native 0.86, React 19.2.
+**Kid Routines**: a child taps through daily routine checklists (Morning, After school, Bedtime…) with timers and a result screen; a parent, behind a press-and-hold lock, manages routines and the weekly plan. Expo SDK 58, React Native 0.88, React 19.3.
 
 - **Android only** for now: don't add iOS- or web-specific code or `.web.tsx` variants.
 - Design handoffs live in `lib/` (gitignored): `design.zip` is the full app (its README holds the tokens, copy and screen specs, and the `class Component` block in `Kid Routines.dc.html` is the behavioural spec), and `timed-step-feature.zip` is focus mode for exact steps, which supersedes the main handoff where they differ. `example/` (gitignored) is the original create-expo-app template, kept for reference only.

@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { usePreventRemove } from 'expo-router/react-navigation';
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -47,14 +47,22 @@ export default function RoutineEditor() {
   const savable = canSave(draft);
 
   // Ask before discarding edits (back button, Android back, swipe). Save/Delete leave freely.
-  const navigation = useNavigation();
   const [initial] = useState(() => JSON.stringify(draft));
   const [leaving, setLeaving] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
   const dirty = JSON.stringify(draft) !== initial;
-  usePreventRemove(dirty && !leaving, ({ data }) =>
+  // SDK 58: to let the blocked navigation through, turn prevention off, then call `repeat()`.
+  usePreventRemove(dirty && !leaving && !discarding, ({ repeat }) =>
     Alert.alert('Discard changes?', 'Your changes to this routine will be lost.', [
       { text: 'Keep editing', style: 'cancel' },
-      { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(data.action) },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        onPress: () => {
+          setDiscarding(true);
+          repeat();
+        },
+      },
     ]),
   );
   useEffect(() => {
