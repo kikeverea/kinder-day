@@ -1,6 +1,15 @@
 /** Derived, display-ready timer values for the checklist screen. */
 import { currentStep, elapsedMs, focusStep } from './routine-run';
-import { isDone, isRunning, isStarted, leftMs, stepRunOf, stepTotalMs, usedMs } from './step-run';
+import {
+  isDone,
+  isRunning,
+  isStarted,
+  leftMs,
+  stepAllowanceMins,
+  stepRunOf,
+  stepTotalMs,
+  usedMs,
+} from './step-run';
 import type { Routine, RoutineRun, Step } from './types';
 
 const toSecs = (ms: number) => Math.round(ms / 1000);
@@ -36,12 +45,14 @@ export const timerCard = (
 };
 
 /**
- * "⏱️ All steps": total step time minus the routine's elapsed time, so it keeps running
- * while an exact step waits for a tap or is paused. Negative when over time (shown as "+m:ss").
+ * "⏱️ All steps": total step time (with exact steps' buffers) minus the routine's elapsed time,
+ * so it keeps running while an exact step waits for a tap or is paused. Negative when over time
+ * (shown as "+m:ss").
  */
 export const totalLeft = (routine: Routine, run: RoutineRun | undefined, now: number) =>
   toSecs(
-    routine.steps.reduce((sum, s) => sum + stepTotalMs(s), 0) - (run ? elapsedMs(run, now) : 0),
+    routine.steps.reduce((sum, s) => sum + stepAllowanceMins(s), 0) * 60_000 -
+      (run ? elapsedMs(run, now) : 0),
   );
 
 export type StepRow = {

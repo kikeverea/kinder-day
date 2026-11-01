@@ -14,9 +14,9 @@ export const morning: Routine = {
   color: '#FFD66B',
   days: [0, 1, 2, 3, 4, 5, 6],
   steps: [
-    { id: 'wake', emoji: '⏰', label: 'Wake up', mins: 2, mode: 'max' },
-    { id: 'teeth', emoji: '🪥', label: 'Brush my teeth', mins: 2, mode: 'exact' },
-    { id: 'dress', emoji: '👕', label: 'Put on my clothes', mins: 5, mode: 'max' },
+    { id: 'wake', emoji: '⏰', label: 'Wake up', mins: 2, mode: 'max', beforeMins: 0, afterMins: 0 },
+    { id: 'teeth', emoji: '🪥', label: 'Brush my teeth', mins: 2, mode: 'exact', beforeMins: 0, afterMins: 0 },
+    { id: 'dress', emoji: '👕', label: 'Put on my clothes', mins: 5, mode: 'max', beforeMins: 0, afterMins: 0 },
   ],
 };
 
@@ -26,7 +26,13 @@ export const school: Routine = {
   emoji: '🏫',
   color: '#8FE3B8',
   days: [1, 2, 3, 4, 5],
-  steps: [{ id: 'snack', emoji: '🍎', label: 'Have a snack', mins: 10, mode: 'max' }],
+  steps: [{ id: 'snack', emoji: '🍎', label: 'Have a snack', mins: 10, mode: 'max', beforeMins: 0, afterMins: 0 }],
+};
+
+/** Morning with 3 min of buffers around Brush my teeth (12 min total). */
+export const buffered: Routine = {
+  ...morning,
+  steps: morning.steps.map((s) => (s.mode === 'exact' ? { ...s, beforeMins: 2, afterMins: 1 } : s)),
 };
 
 export const makeState = (overrides: Partial<AppData> = {}): AppData => ({

@@ -138,3 +138,14 @@ it('migrates v7 runs: stoppedMs defaults to 0', () => {
   const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v7, version: 7 }) });
   expect(createAppStore(storage).getState().runs.morning.stoppedMs).toBe(0);
 });
+
+it('migrates v8 steps: buffers default to 0', () => {
+  const v8 = createInitialData(Date.now());
+  v8.routines = v8.routines.map((r) => ({
+    ...r,
+    steps: r.steps.map(({ beforeMins: _b, afterMins: _a, ...s }) => s as typeof r.steps[number]),
+  }));
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v8, version: 8 }) });
+  const steps = createAppStore(storage).getState().routines.flatMap((r) => r.steps);
+  expect(steps.every((s) => s.beforeMins === 0 && s.afterMins === 0)).toBe(true);
+});

@@ -3,19 +3,20 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
-import { STEP_MODES } from '@/domain/constants';
-import { clampMins, EMPTY_NEW_STEP, toggleMode, type NewStep } from '@/domain/draft';
+import { BUFFER_HINT, MAX_BUFFER_MINS, MIN_BUFFER_MINS, STEP_MODES } from '@/domain/constants';
+import { clampBufferMins, clampMins, EMPTY_NEW_STEP, toggleMode, type NewStep } from '@/domain/draft';
 import { colors, fonts } from '@/theme/tokens';
 
 import { IconGrid } from './icon-grid';
 import { MinutesStepper } from './minutes-stepper';
 import { ModeChip } from './mode-chip';
 
-/** "Add a step…" box: icon picker, label, mode and minutes. Resets after adding. */
+/** "Add a step…" box: icon picker, label, mode and minutes (plus buffers for exact steps). Resets after adding. */
 export function AddStepBox({ onAdd }: { onAdd: (step: NewStep) => void }) {
   const [step, setStep] = useState<NewStep>(EMPTY_NEW_STEP);
   const [picking, setPicking] = useState(false);
   const canAdd = step.label.trim().length > 0;
+  const exact = step.mode === 'exact';
 
   const add = () => {
     if (!canAdd) return;
@@ -53,6 +54,18 @@ export function AddStepBox({ onAdd }: { onAdd: (step: NewStep) => void }) {
           </AppText>
         </Pressable>
       </View>
+      {exact ? (
+        <View style={styles.buffer}>
+          <MinutesStepper
+            label="Before"
+            mins={step.beforeMins}
+            min={MIN_BUFFER_MINS}
+            max={MAX_BUFFER_MINS}
+            onChange={(mins) => setStep((s) => ({ ...s, beforeMins: clampBufferMins(mins) }))}
+            large
+          />
+        </View>
+      ) : null}
       <View style={styles.settings}>
         <ModeChip mode={step.mode} onPress={() => setStep((s) => ({ ...s, mode: toggleMode(s.mode) }))} large />
         <View style={styles.spacer} />
@@ -62,8 +75,21 @@ export function AddStepBox({ onAdd }: { onAdd: (step: NewStep) => void }) {
           large
         />
       </View>
+      {exact ? (
+        <View style={styles.buffer}>
+          <MinutesStepper
+            label="After"
+            mins={step.afterMins}
+            min={MIN_BUFFER_MINS}
+            max={MAX_BUFFER_MINS}
+            onChange={(mins) => setStep((s) => ({ ...s, afterMins: clampBufferMins(mins) }))}
+            large
+          />
+        </View>
+      ) : null}
       <AppText size={13} color={colors.muted} style={styles.hint}>
         {STEP_MODES[step.mode].hint}
+        {exact ? ` ${BUFFER_HINT}` : ''}
       </AppText>
       {picking ? (
         <View style={styles.picker}>
@@ -119,6 +145,7 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.4 },
   settings: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 4 },
   spacer: { flex: 1 },
+  buffer: { alignItems: 'flex-end', paddingHorizontal: 4 },
   hint: { paddingHorizontal: 4, lineHeight: 17 },
   picker: { borderTopWidth: 2, borderTopColor: colors.pressedTint, paddingTop: 10 },
 });

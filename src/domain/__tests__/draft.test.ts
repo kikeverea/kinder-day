@@ -89,6 +89,16 @@ describe('steps', () => {
     expect(next.steps[1]).toBe(d.steps[1]);
   });
 
+  it('clamps buffer minutes to 0–30', () => {
+    const d = draftFromRoutine(morning);
+    expect(updateStep(d, 'teeth', { beforeMins: -1, afterMins: 45 }).steps[1]).toMatchObject({
+      beforeMins: 0,
+      afterMins: 30,
+    });
+    const added = addStep(d, { ...EMPTY_NEW_STEP, label: 'Read', mode: 'exact', beforeMins: 99 });
+    expect(added.steps[3]).toMatchObject({ beforeMins: 30, afterMins: 0 });
+  });
+
   it('removeStep and moveStep', () => {
     expect(removeStep(d, 'teeth').steps.map((s) => s.id)).toEqual(['wake', 'dress']);
     expect(moveStep(d, 2, 0).steps.map((s) => s.id)).toEqual(['dress', 'wake', 'teeth']);

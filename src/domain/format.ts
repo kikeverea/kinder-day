@@ -1,4 +1,5 @@
 import { DAY_ABBR, DAY_NAME, WEEK } from './constants';
+import { stepAllowanceMins } from './step-run';
 import type { DayOfWeek, Routine, RoutineResult, Step } from './types';
 
 /** Seconds → "m:ss". Negative values are formatted by magnitude; callers add the "+" for overtime. */
@@ -21,8 +22,9 @@ export const daysLabel = (days: DayOfWeek[]) => {
     .join(', ');
 };
 
+/** Total time allowed, including exact steps' buffers. */
 export const routineMinutes = (routine: Pick<Routine, 'steps'>) =>
-  routine.steps.reduce((sum, s) => sum + s.mins, 0);
+  routine.steps.reduce((sum, s) => sum + stepAllowanceMins(s), 0);
 
 export const greeting = (hour: number) =>
   hour < 12

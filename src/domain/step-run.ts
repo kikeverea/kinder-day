@@ -8,6 +8,10 @@ export const stepRunOf = (run: RoutineRun | undefined, stepId: string) =>
 
 export const stepTotalMs = (step: Step) => step.mins * 60_000;
 
+/** The step's share of the routine's total time: its minutes plus an exact step's buffers. */
+export const stepAllowanceMins = (step: Step) =>
+  step.mins + (step.mode === 'exact' ? step.beforeMins + step.afterMins : 0);
+
 /** Time used so far, including the current running stretch. */
 export const usedMs = (sr: StepRun, now: number) =>
   sr.consumedMs + (sr.startedAt === null ? 0 : now - sr.startedAt);

@@ -1,5 +1,13 @@
 /** Pure editing operations for the routine editor's local draft (saved with `upsertRoutine`). */
-import { ALL_DAYS, DEFAULT_STEP_MINS, MAX_STEP_MINS, MIN_STEP_MINS, ROUTINE_COLORS } from './constants';
+import {
+  ALL_DAYS,
+  DEFAULT_STEP_MINS,
+  MAX_BUFFER_MINS,
+  MAX_STEP_MINS,
+  MIN_BUFFER_MINS,
+  MIN_STEP_MINS,
+  ROUTINE_COLORS,
+} from './constants';
 import { uid } from './ids';
 import { moveItem, sortDays } from './schedule';
 import type { DayOfWeek, Routine, Step, StepMode } from './types';
@@ -14,6 +22,8 @@ export const EMPTY_NEW_STEP: NewStep = {
   label: '',
   mins: DEFAULT_STEP_MINS,
   mode: 'max',
+  beforeMins: 0,
+  afterMins: 0,
 };
 
 /** New routines default to every day, ⭐, and the next palette colour. */
@@ -44,6 +54,16 @@ export const canSave = (draft: RoutineDraft) => draft.name.trim().length > 0 && 
 
 export const clampMins = (mins: number) => Math.min(MAX_STEP_MINS, Math.max(MIN_STEP_MINS, mins));
 
+export const clampBufferMins = (mins: number) =>
+  Math.min(MAX_BUFFER_MINS, Math.max(MIN_BUFFER_MINS, mins));
+
+const clampStep = <T extends NewStep>(step: T): T => ({
+  ...step,
+  mins: clampMins(step.mins),
+  beforeMins: clampBufferMins(step.beforeMins),
+  afterMins: clampBufferMins(step.afterMins),
+});
+
 export const toggleMode = (mode: StepMode): StepMode => (mode === 'max' ? 'exact' : 'max');
 
 export const toggleDay = (draft: RoutineDraft, day: DayOfWeek): RoutineDraft => ({
@@ -63,7 +83,7 @@ export const addStep = (draft: RoutineDraft, step: NewStep): RoutineDraft => {
   if (!label) return draft;
   return {
     ...draft,
-    steps: [...draft.steps, { ...step, id: uid(), label, mins: clampMins(step.mins) }],
+    steps: [...draft.steps, clampStep({ ...step, id: uid(), label })],
   };
 };
 
@@ -73,11 +93,7 @@ export const updateStep = (
   patch: Partial<Omit<Step, 'id'>>,
 ): RoutineDraft => ({
   ...draft,
-  steps: draft.steps.map((s) =>
-    s.id === stepId
-      ? { ...s, ...patch, mins: clampMins(patch.mins ?? s.mins) }
-      : s,
-  ),
+  steps: draft.steps.map((s) => (s.id === stepId ? clampStep({ ...s, ...patch }) : s)),
 });
 
 export const removeStep = (draft: RoutineDraft, stepId: string): RoutineDraft => ({

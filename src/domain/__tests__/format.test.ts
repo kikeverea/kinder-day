@@ -16,7 +16,7 @@ import {
   todayStatus,
   stepSubtitle,
 } from '../format';
-import { T0, morning } from './fixtures';
+import { T0, buffered, morning } from './fixtures';
 
 describe('formatClock', () => {
   it.each([
@@ -49,6 +49,10 @@ it('pluralizes and sums minutes', () => {
   expect(plural(1, 'step')).toBe('1 step');
   expect(plural(3, 'step')).toBe('3 steps');
   expect(routineMinutes(morning)).toBe(9);
+  expect(routineMinutes(buffered)).toBe(12);
+  // buffers only count for exact steps
+  const asMax = { steps: buffered.steps.map((s) => ({ ...s, mode: 'max' as const })) };
+  expect(routineMinutes(asMax)).toBe(9);
 });
 
 it('formats dates and times like the design', () => {

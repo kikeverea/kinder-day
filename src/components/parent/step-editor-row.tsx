@@ -4,6 +4,7 @@ import { useReorderableDrag } from 'react-native-reorderable-list';
 
 import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
+import { MAX_BUFFER_MINS, MIN_BUFFER_MINS } from '@/domain/constants';
 import type { Step } from '@/domain/types';
 import { colors } from '@/theme/tokens';
 
@@ -15,11 +16,16 @@ type Props = {
   index: number;
   onToggleMode: () => void;
   onMins: (mins: number) => void;
+  onBuffer: (patch: Partial<Pick<Step, 'beforeMins' | 'afterMins'>>) => void;
   onRemove: () => void;
 };
 
-/** Editor step: drag handle, number, icon, label, mode chip, minutes and remove. Must render inside a reorderable list. */
-export function StepEditorRow({ step, index, onToggleMode, onMins, onRemove }: Props) {
+/**
+ * Editor step: drag handle, number, icon, label, mode chip, minutes and remove. Exact steps add
+ * "Before" and "After" buffer minutes above and below their own. Must render inside a reorderable list.
+ */
+export function StepEditorRow({ step, index, onToggleMode, onMins, onBuffer, onRemove }: Props) {
+  const exact = step.mode === 'exact';
   const drag = useReorderableDrag();
 
   return (
@@ -37,10 +43,28 @@ export function StepEditorRow({ step, index, onToggleMode, onMins, onRemove }: P
         <AppText size={18} style={styles.label}>
           {step.label}
         </AppText>
+        {exact ? (
+          <MinutesStepper
+            label="Before"
+            mins={step.beforeMins}
+            min={MIN_BUFFER_MINS}
+            max={MAX_BUFFER_MINS}
+            onChange={(beforeMins) => onBuffer({ beforeMins })}
+          />
+        ) : null}
         <View style={styles.controls}>
           <ModeChip mode={step.mode} onPress={onToggleMode} />
           <MinutesStepper mins={step.mins} onChange={onMins} />
         </View>
+        {exact ? (
+          <MinutesStepper
+            label="After"
+            mins={step.afterMins}
+            min={MIN_BUFFER_MINS}
+            max={MAX_BUFFER_MINS}
+            onChange={(afterMins) => onBuffer({ afterMins })}
+          />
+        ) : null}
       </View>
       <Pressable onPress={onRemove} accessibilityLabel={`Remove ${step.label}`} style={styles.remove}>
         <AppText size={18} color={colors.dangerText}>

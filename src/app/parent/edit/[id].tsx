@@ -182,6 +182,7 @@ export default function RoutineEditor() {
                   index={index}
                   onToggleMode={() => setDraft((d) => updateStep(d, item.id, { mode: toggleMode(item.mode) }))}
                   onMins={(mins) => setDraft((d) => updateStep(d, item.id, { mins }))}
+                  onBuffer={(patch) => setDraft((d) => updateStep(d, item.id, patch))}
                   onRemove={() => setDraft((d) => removeStep(d, item.id))}
                 />
               )}

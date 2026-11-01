@@ -11,6 +11,12 @@ export type Step = {
   /** 1–60 */
   mins: number;
   mode: StepMode;
+  /**
+   * Exact steps only: extra minutes allowed before and after the step (0–30). They add to the
+   * routine's total time ("All steps" and the rating) but show no countdown of their own.
+   */
+  beforeMins: number;
+  afterMins: number;
 };
 
 export type Routine = {

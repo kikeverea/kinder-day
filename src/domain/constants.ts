@@ -35,6 +35,8 @@ export const ICONS = [
 export const MIN_STEP_MINS = 1;
 export const MAX_STEP_MINS = 60;
 export const DEFAULT_STEP_MINS = 2;
+export const MIN_BUFFER_MINS = 0;
+export const MAX_BUFFER_MINS = 30;
 
 export const MAX_GRACE_MINS = 30;
 
@@ -45,6 +47,8 @@ export const STEP_MODES: Record<StepMode, { label: string; hint: string }> = {
     hint: 'Must last the full time — it checks itself off when the timer ends.',
   },
 };
+
+export const BUFFER_HINT = 'Before and After add extra time to the routine’s total for getting ready and wrapping up.';
 
 export const FACE_EMOJI = {
   angry: '😡',

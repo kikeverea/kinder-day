@@ -8,6 +8,8 @@ const step = (emoji: string, label: string, mins: number, mode: StepMode = 'max'
   label,
   mins,
   mode,
+  beforeMins: 0,
+  afterMins: 0,
 });
 
 export const createSeedRoutines = (): Routine[] => [

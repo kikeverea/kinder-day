@@ -1,6 +1,6 @@
 import { cheerFor, focusState, stepRow, timerCard, totalLeft } from '../timer';
 import type { RoutineRun, StepRun } from '../types';
-import { T0, min, morning, sec } from './fixtures';
+import { T0, buffered, min, morning, sec } from './fixtures';
 
 const run = (steps: Record<string, Partial<StepRun>> = {}): RoutineRun => ({
   openedAt: T0,
@@ -48,6 +48,11 @@ describe('totalLeft', () => {
   it('keeps running while an exact step is paused', () => {
     const paused = run({ wake: done, teeth: { consumedMs: sec(30) } });
     expect(totalLeft(morning, paused, T0 + min(4))).toBe(300);
+  });
+
+  it("adds exact steps' buffers to the total", () => {
+    expect(totalLeft(buffered, undefined, T0)).toBe(720);
+    expect(totalLeft(buffered, run({ wake: done }), T0 + min(10))).toBe(120);
   });
 
   it('goes negative when over time', () => {
