@@ -11,7 +11,7 @@ type Props = {
   /** Defaults to a step's range, 1–60. */
   min?: number;
   max?: number;
-  /** Shown before the stepper and in its accessibility labels ("Before"). */
+  /** Shown before the stepper in a fixed-width column, so labelled steppers stacked together line up. */
   label?: string;
 };
 
@@ -34,7 +34,7 @@ export function MinutesStepper({
   return (
     <View style={styles.row}>
       {label ? (
-        <AppText size={large ? 15 : 13} weight="semibold" color={color} style={styles.label}>
+        <AppText size={large ? 15 : 13} weight="semibold" color={color} style={{ width: large ? 60 : 52 }}>
           {label}
         </AppText>
       ) : null}
@@ -80,5 +80,4 @@ const styles = StyleSheet.create({
   },
   largeButton: { backgroundColor: colors.parentGround },
   disabled: { opacity: 0.4 },
-  label: { minWidth: 48 },
 });

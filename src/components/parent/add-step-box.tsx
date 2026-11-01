@@ -54,8 +54,21 @@ export function AddStepBox({ onAdd }: { onAdd: (step: NewStep) => void }) {
           </AppText>
         </Pressable>
       </View>
+      <View style={styles.settings}>
+        <ModeChip mode={step.mode} onPress={() => setStep((s) => ({ ...s, mode: toggleMode(s.mode) }))} large />
+        {exact ? null : (
+          <>
+            <View style={styles.spacer} />
+            <MinutesStepper
+              mins={step.mins}
+              onChange={(mins) => setStep((s) => ({ ...s, mins: clampMins(mins) }))}
+              large
+            />
+          </>
+        )}
+      </View>
       {exact ? (
-        <View style={styles.buffer}>
+        <View style={styles.timers}>
           <MinutesStepper
             label="Before"
             mins={step.beforeMins}
@@ -64,19 +77,12 @@ export function AddStepBox({ onAdd }: { onAdd: (step: NewStep) => void }) {
             onChange={(mins) => setStep((s) => ({ ...s, beforeMins: clampBufferMins(mins) }))}
             large
           />
-        </View>
-      ) : null}
-      <View style={styles.settings}>
-        <ModeChip mode={step.mode} onPress={() => setStep((s) => ({ ...s, mode: toggleMode(s.mode) }))} large />
-        <View style={styles.spacer} />
-        <MinutesStepper
-          mins={step.mins}
-          onChange={(mins) => setStep((s) => ({ ...s, mins: clampMins(mins) }))}
-          large
-        />
-      </View>
-      {exact ? (
-        <View style={styles.buffer}>
+          <MinutesStepper
+            label="Task"
+            mins={step.mins}
+            onChange={(mins) => setStep((s) => ({ ...s, mins: clampMins(mins) }))}
+            large
+          />
           <MinutesStepper
             label="After"
             mins={step.afterMins}
@@ -145,7 +151,7 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.4 },
   settings: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 4 },
   spacer: { flex: 1 },
-  buffer: { alignItems: 'flex-end', paddingHorizontal: 4 },
+  timers: { gap: 8, paddingHorizontal: 4 },
   hint: { paddingHorizontal: 4, lineHeight: 17 },
   picker: { borderTopWidth: 2, borderTopColor: colors.pressedTint, paddingTop: 10 },
 });

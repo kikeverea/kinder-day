@@ -21,8 +21,8 @@ type Props = {
 };
 
 /**
- * Editor step: drag handle, number, icon, label, mode chip, minutes and remove. Exact steps add
- * "Before" and "After" buffer minutes above and below their own. Must render inside a reorderable list.
+ * Editor step: drag handle, number, icon, label, mode chip, minutes and remove. Exact steps show the
+ * chip, then aligned Before / Task / After minutes. Must render inside a reorderable list.
  */
 export function StepEditorRow({ step, index, onToggleMode, onMins, onBuffer, onRemove }: Props) {
   const exact = step.mode === 'exact';
@@ -44,27 +44,32 @@ export function StepEditorRow({ step, index, onToggleMode, onMins, onBuffer, onR
           {step.label}
         </AppText>
         {exact ? (
-          <MinutesStepper
-            label="Before"
-            mins={step.beforeMins}
-            min={MIN_BUFFER_MINS}
-            max={MAX_BUFFER_MINS}
-            onChange={(beforeMins) => onBuffer({ beforeMins })}
-          />
-        ) : null}
-        <View style={styles.controls}>
-          <ModeChip mode={step.mode} onPress={onToggleMode} />
-          <MinutesStepper mins={step.mins} onChange={onMins} />
-        </View>
-        {exact ? (
-          <MinutesStepper
-            label="After"
-            mins={step.afterMins}
-            min={MIN_BUFFER_MINS}
-            max={MAX_BUFFER_MINS}
-            onChange={(afterMins) => onBuffer({ afterMins })}
-          />
-        ) : null}
+          <>
+            <View style={styles.chip}>
+              <ModeChip mode={step.mode} onPress={onToggleMode} />
+            </View>
+            <MinutesStepper
+              label="Before"
+              mins={step.beforeMins}
+              min={MIN_BUFFER_MINS}
+              max={MAX_BUFFER_MINS}
+              onChange={(beforeMins) => onBuffer({ beforeMins })}
+            />
+            <MinutesStepper label="Task" mins={step.mins} onChange={onMins} />
+            <MinutesStepper
+              label="After"
+              mins={step.afterMins}
+              min={MIN_BUFFER_MINS}
+              max={MAX_BUFFER_MINS}
+              onChange={(afterMins) => onBuffer({ afterMins })}
+            />
+          </>
+        ) : (
+          <View style={styles.controls}>
+            <ModeChip mode={step.mode} onPress={onToggleMode} />
+            <MinutesStepper mins={step.mins} onChange={onMins} />
+          </View>
+        )}
       </View>
       <Pressable onPress={onRemove} accessibilityLabel={`Remove ${step.label}`} style={styles.remove}>
         <AppText size={18} color={colors.dangerText}>
@@ -101,6 +106,7 @@ const styles = StyleSheet.create({
   },
   body: { flex: 1, minWidth: 0, gap: 6 },
   label: { lineHeight: 21 },
+  chip: { alignSelf: 'flex-start' },
   controls: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
   remove: {
     width: 40,

@@ -48,7 +48,7 @@ export const STEP_MODES: Record<StepMode, { label: string; hint: string }> = {
   },
 };
 
-export const BUFFER_HINT = 'Before and After add extra time to the routine’s total for getting ready and wrapping up.';
+export const BUFFER_HINT = 'Before and After add time to the routine’s total for getting ready and wrapping up.';
 
 export const FACE_EMOJI = {
   angry: '😡',
