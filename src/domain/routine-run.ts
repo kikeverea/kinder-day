@@ -19,6 +19,13 @@ import type { Routine, RoutineRun, StepRun } from './types';
 export const isRoutineRunning = (run: RoutineRun | undefined) =>
   !!run && run.finishedAt === null && Object.values(run.steps).some(isRunning);
 
+/**
+ * Time the routine has been open and not finished: it keeps counting while an exact step
+ * waits for a tap or is paused, and stops while the run is finished.
+ */
+export const elapsedMs = (run: RoutineRun, now: number) =>
+  (run.finishedAt ?? now) - run.openedAt - run.stoppedMs;
+
 /** The exact step in focus mode: started (running or paused) and not done. */
 export const focusStep = (routine: Routine, run: RoutineRun | undefined) =>
   routine.steps.find((s) => {

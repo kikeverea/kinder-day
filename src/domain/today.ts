@@ -64,9 +64,9 @@ export const openRoutine = <S extends AppData>(state: S, routineId: string, now:
   if (!routine) return s;
   const existing = s.runs[routineId];
   const run: RoutineRun = !existing
-    ? { openedAt: now, finishedAt: null, steps: {} }
+    ? { openedAt: now, finishedAt: null, stoppedMs: 0, steps: {} }
     : existing.finishedAt !== null
-      ? { ...existing, finishedAt: null }
+      ? { ...existing, finishedAt: null, stoppedMs: existing.stoppedMs + now - existing.finishedAt }
       : existing;
   return withRun(s, routineId, advance(routine, run, now));
 };

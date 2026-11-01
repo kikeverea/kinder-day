@@ -17,7 +17,7 @@ describe('rate', () => {
 
 it('completion counts done steps and ignores entries of deleted steps', () => {
   const doneRun = { consumedMs: 0, startedAt: null, doneAt: T0 };
-  const run = { openedAt: T0, finishedAt: null, steps: { wake: doneRun, gone: doneRun } };
+  const run = { openedAt: T0, finishedAt: null, stoppedMs: 0, steps: { wake: doneRun, gone: doneRun } };
   expect(completion(morning, run)).toEqual({ done: 1, total: 3, left: 2, pct: 33 });
 });
 

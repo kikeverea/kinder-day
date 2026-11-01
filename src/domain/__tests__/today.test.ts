@@ -237,6 +237,16 @@ describe('finishRoutine', () => {
     expect(s.results.morning).toMatchObject({ rating: 'good', doneSteps: 3 });
   });
 
+  it('counts time an exact step waited for a tap as overtime', () => {
+    // wake done at 1 min; teeth waits 6 min, then teeth (2) and dress (1) finish at 10 min
+    let s = toggleStep(atTeeth(), 'morning', 'teeth', T0 + min(7));
+    s = toggleStep(tick(s, T0 + min(9)), 'morning', 'dress', T0 + min(10));
+    expect(finishRoutine(s, 'morning', T0 + min(10)).results.morning).toMatchObject({
+      rating: 'regular',
+      overtimeSecs: 60,
+    });
+  });
+
   it('stops the clock: no step runs and ticks do not restart it', () => {
     const finished = finishRoutine(openRoutine(makeState(), 'morning', T0), 'morning', T0 + min(1));
     expect(finished.runs.morning.finishedAt).toBe(T0 + min(1));
@@ -247,7 +257,7 @@ describe('finishRoutine', () => {
   it('reopening a finished routine resumes its clock', () => {
     const finished = finishRoutine(openRoutine(makeState(), 'morning', T0), 'morning', T0 + min(1));
     const s = openRoutine(finished, 'morning', T0 + min(5));
-    expect(s.runs.morning.finishedAt).toBeNull();
+    expect(s.runs.morning).toMatchObject({ finishedAt: null, stoppedMs: min(4) });
     expect(s.runs.morning.steps.wake).toEqual({ consumedMs: min(1), startedAt: T0 + min(5), doneAt: null });
   });
 });

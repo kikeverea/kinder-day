@@ -38,7 +38,7 @@ export type AppState = AppData & {
 type PersistedState = AppData;
 
 export const STORAGE_KEY = 'kinder-day.state';
-const STORAGE_VERSION = 7;
+const STORAGE_VERSION = 8;
 
 /** Upgrades persisted data from older `STORAGE_VERSION`s. Steps run in order. */
 export const migrate = (persisted: unknown, version: number): PersistedState => {
@@ -80,6 +80,14 @@ export const migrate = (persisted: unknown, version: number): PersistedState => 
   if (version < 7) {
     // v7: archived past days.
     state = { ...state, history: state.history ?? {} };
+  }
+  if (version < 8) {
+    // v8: the routine's "All steps" clock runs on elapsed time; RoutineRun gains stoppedMs.
+    const runs: PersistedState['runs'] = {};
+    for (const [id, run] of Object.entries(state.runs ?? {})) {
+      runs[id] = { ...run, stoppedMs: run.stoppedMs ?? 0 };
+    }
+    state = { ...state, runs };
   }
   return state;
 };

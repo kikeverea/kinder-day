@@ -5,6 +5,7 @@ import { T0, min, morning, sec } from './fixtures';
 const run = (steps: Record<string, Partial<StepRun>> = {}): RoutineRun => ({
   openedAt: T0,
   finishedAt: null,
+  stoppedMs: 0,
   steps: Object.fromEntries(
     Object.entries(steps).map(([id, sr]) => [id, { consumedMs: 0, startedAt: null, doneAt: null, ...sr }]),
   ),
@@ -39,13 +40,24 @@ describe('totalLeft', () => {
     expect(totalLeft(morning, undefined, T0)).toBe(540);
   });
 
-  it('subtracts time used by every step but not idle time', () => {
-    // wake used 1 min; 10 idle minutes pass with teeth waiting for a tap
-    expect(totalLeft(morning, run({ wake: done }), T0 + min(10))).toBe(480);
+  it('keeps running while an exact step waits for a tap', () => {
+    // wake used 1 min; teeth then waits 2 min for a tap
+    expect(totalLeft(morning, run({ wake: done }), T0 + min(3))).toBe(360);
+  });
+
+  it('keeps running while an exact step is paused', () => {
+    const paused = run({ wake: done, teeth: { consumedMs: sec(30) } });
+    expect(totalLeft(morning, paused, T0 + min(4))).toBe(300);
   });
 
   it('goes negative when over time', () => {
     expect(totalLeft(morning, run({ wake: { startedAt: T0 } }), T0 + min(10))).toBe(-60);
+  });
+
+  it('stops while finished and skips that time after reopening', () => {
+    expect(totalLeft(morning, { ...run(), finishedAt: T0 + min(2) }, T0 + min(30))).toBe(420);
+    // reopened at T0 + 30 min after 28 min finished
+    expect(totalLeft(morning, { ...run(), stoppedMs: min(28) }, T0 + min(31))).toBe(360);
   });
 });
 

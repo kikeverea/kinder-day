@@ -132,3 +132,9 @@ it('migrates v6: adds an empty history', () => {
   const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v6, version: 6 }) });
   expect(createAppStore(storage).getState().history).toEqual({});
 });
+
+it('migrates v7 runs: stoppedMs defaults to 0', () => {
+  const v7 = { ...createInitialData(Date.now()), runs: { morning: { openedAt: 1, finishedAt: null, steps: {} } } };
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v7, version: 7 }) });
+  expect(createAppStore(storage).getState().runs.morning.stoppedMs).toBe(0);
+});

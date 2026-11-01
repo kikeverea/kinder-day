@@ -63,6 +63,8 @@ export type RoutineRun = {
   openedAt: number;
   /** When "I'm finished" was tapped; null while in progress. A finished run's clock is stopped. */
   finishedAt: number | null;
+  /** Time spent finished before being reopened; excluded from the routine's elapsed time. */
+  stoppedMs: number;
   /** stepId → that step's timer. Steps never touched have no entry. */
   steps: Record<string, StepRun>;
 };
