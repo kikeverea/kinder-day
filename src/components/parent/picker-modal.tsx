@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { colors } from '@/theme/tokens';
@@ -18,9 +18,11 @@ type Props = {
 export function PickerModal({ visible, emoji, name, prompt, onClose, children }: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close">
-        {/* Swallow taps on the sheet so they don't close it. */}
-        <Pressable style={styles.sheet} onPress={() => {}}>
+      <View style={styles.backdrop}>
+        {/* A sibling behind the sheet, not its parent: a pressable around the sheet would take the
+            touch responder and stop the sticker list from scrolling when a drag starts off an icon. */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
+        <View style={styles.sheet}>
           <AppText size={22} weight="semibold" align="center">
             {emoji} {name}
           </AppText>
@@ -28,8 +30,8 @@ export function PickerModal({ visible, emoji, name, prompt, onClose, children }:
             {prompt}
           </AppText>
           {children}
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
