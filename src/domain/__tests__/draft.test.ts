@@ -1,4 +1,8 @@
 import {
+  addAddOn,
+  EMPTY_NEW_ADD_ON,
+  removeAddOn,
+  updateAddOnMins,
   addStep,
   canSave,
   clampMins,
@@ -102,5 +106,29 @@ describe('steps', () => {
   it('removeStep and moveStep', () => {
     expect(removeStep(d, 'teeth').steps.map((s) => s.id)).toEqual(['wake', 'dress']);
     expect(moveStep(d, 2, 0).steps.map((s) => s.id)).toEqual(['dress', 'wake', 'teeth']);
+  });
+});
+
+describe('add-ons', () => {
+  it('adds an add-on with a trimmed label and clamped minutes, ignoring empty labels', () => {
+    const d = draftFromRoutine(morning);
+    expect(addAddOn(d, { ...EMPTY_NEW_ADD_ON, label: '  ' })).toBe(d);
+    const next = addAddOn(d, { ...EMPTY_NEW_ADD_ON, label: ' Poop ', mins: 99 });
+    expect(next.addOns).toEqual([{ id: expect.any(String), emoji: '🚽', label: 'Poop', mins: 60 }]);
+    expect(next.steps).toBe(d.steps);
+  });
+
+  it('updates minutes and removes add-ons', () => {
+    const d = addAddOn(draftFromRoutine(morning), { ...EMPTY_NEW_ADD_ON, label: 'Poop' });
+    const id = d.addOns[0].id;
+    expect(updateAddOnMins(d, id, 0).addOns[0].mins).toBe(1);
+    expect(removeAddOn(d, id).addOns).toEqual([]);
+  });
+
+  it('draftFromRoutine copies add-ons', () => {
+    const routine = { ...morning, addOns: [{ id: 'poop', emoji: '💩', label: 'Poop', mins: 5 }] };
+    const d = draftFromRoutine(routine);
+    expect(d.addOns).toEqual(routine.addOns);
+    expect(d.addOns[0]).not.toBe(routine.addOns[0]);
   });
 });

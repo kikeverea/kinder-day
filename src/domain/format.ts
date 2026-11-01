@@ -26,6 +26,9 @@ export const daysLabel = (days: DayOfWeek[]) => {
 export const routineMinutes = (routine: Pick<Routine, 'steps'>) =>
   routine.steps.reduce((sum, s) => sum + stepAllowanceMins(s), 0);
 
+/** What an add-on adds to the routine's time ("+5 min"). */
+export const addOnExtra = (mins: number) => `+${mins} min`;
+
 export const greeting = (hour: number) =>
   hour < 12
     ? { text: 'Good morning,', emoji: '☀️' }

@@ -32,11 +32,16 @@ export const ICONS = [
   '🛏️', '🧸', '🐶', '🤸‍♀️', '🏊‍♀️', '🎨', '🚲', '🧹', '💧', '⭐',
 ] as const;
 
+/** Icons offered for add-ons: things that come up mid-routine. */
+export const ADD_ON_ICONS = ['🚽', '💩', '🧻', '🤧', '🩹', '💧', '🤮', '🤒', '😴', '📞', '🐶', '🧃'] as const;
+
 export const MIN_STEP_MINS = 1;
 export const MAX_STEP_MINS = 60;
 export const DEFAULT_STEP_MINS = 2;
 export const MIN_BUFFER_MINS = 0;
 export const MAX_BUFFER_MINS = 30;
+
+export const DEFAULT_ADD_ON_MINS = 5;
 
 export const MAX_GRACE_MINS = 30;
 
@@ -47,6 +52,9 @@ export const STEP_MODES: Record<StepMode, { label: string; hint: string }> = {
     hint: 'Must last the full time — it checks itself off when the timer ends.',
   },
 };
+
+export const ADD_ON_HINT =
+  'For things that can come up, like a poop break 💩. Not part of the steps: the kid taps one during the routine to add its time and start its timer.';
 
 export const BUFFER_HINT = 'Before and After add time to the routine’s total for getting ready and wrapping up.';
 

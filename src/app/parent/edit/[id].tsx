@@ -11,25 +11,31 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
+import { AddAddOnBox } from '@/components/parent/add-add-on-box';
+import { AddOnEditorRow } from '@/components/parent/add-on-editor-row';
 import { AddStepBox } from '@/components/parent/add-step-box';
 import { ColorPicker } from '@/components/parent/color-picker';
 import { DayPicker } from '@/components/parent/day-picker';
 import { IconGrid } from '@/components/parent/icon-grid';
 import { StepEditorRow } from '@/components/parent/step-editor-row';
 import {
+  addAddOn,
   addStep,
   canSave,
   draftFromRoutine,
   moveStep,
   newDraft,
+  removeAddOn,
   removeStep,
   toggleDay,
   toggleEveryDay,
   toggleMode,
   toRoutine,
+  updateAddOnMins,
   updateStep,
   type RoutineDraft,
 } from '@/domain/draft';
+import { ADD_ON_HINT } from '@/domain/constants';
 import { stepsTotalLabel } from '@/domain/format';
 import { isSavedTemplate } from '@/domain/templates';
 import { useAppStore } from '@/store';
@@ -201,6 +207,24 @@ export default function RoutineEditor() {
               onSaveTemplate={saveStepTemplate}
               onDeleteTemplate={deleteStepTemplate}
             />
+          </View>
+
+          <View style={styles.section}>
+            <AppText size={17} weight="semibold">
+              Add-ons
+            </AppText>
+            <AppText size={13} color={colors.muted}>
+              {ADD_ON_HINT}
+            </AppText>
+            {draft.addOns.map((addOn) => (
+              <AddOnEditorRow
+                key={addOn.id}
+                addOn={addOn}
+                onMins={(mins) => setDraft((d) => updateAddOnMins(d, addOn.id, mins))}
+                onRemove={() => setDraft((d) => removeAddOn(d, addOn.id))}
+              />
+            ))}
+            <AddAddOnBox onAdd={(addOn) => setDraft((d) => addAddOn(d, addOn))} />
           </View>
         </ScrollViewContainer>
 

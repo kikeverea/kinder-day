@@ -19,6 +19,18 @@ export type Step = {
   afterMins: number;
 };
 
+/**
+ * Something that may come up during a routine (🚽 Poop). Unlike a step it only has a time: the
+ * kid starts it on demand, its minutes are added to the routine's total, and its own timer runs.
+ */
+export type AddOn = {
+  id: string;
+  emoji: string;
+  label: string;
+  /** 1–60 */
+  mins: number;
+};
+
 export type Routine = {
   id: string;
   name: string;
@@ -26,6 +38,7 @@ export type Routine = {
   color: string;
   days: DayOfWeek[];
   steps: Step[];
+  addOns: AddOn[];
 };
 
 export type Rating = 'good' | 'regular' | 'bad';
@@ -63,6 +76,20 @@ export type StepRun = {
   doneAt: number | null;
 };
 
+/**
+ * One use of an add-on during a run. It copies the add-on's icon, label and minutes, so editing
+ * or deleting the add-on mid-run doesn't change it. Runs from `startedAt` until the kid taps done.
+ */
+export type AddOnRun = {
+  addOnId: string;
+  emoji: string;
+  label: string;
+  mins: number;
+  startedAt: number;
+  /** When the kid tapped done (or the routine was finished); null while it runs. */
+  doneAt: number | null;
+};
+
 /** A routine's activity today. At most one of its steps is running at any moment. */
 export type RoutineRun = {
   /** When the routine was first opened today. */
@@ -73,6 +100,8 @@ export type RoutineRun = {
   stoppedMs: number;
   /** stepId → that step's timer. Steps never touched have no entry. */
   steps: Record<string, StepRun>;
+  /** Add-ons used so far, oldest first (each at most once). At most one is running, and no step runs meanwhile. */
+  addOns: AddOnRun[];
 };
 
 export type Settings = {

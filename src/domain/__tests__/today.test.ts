@@ -1,6 +1,8 @@
 import { resultFace } from '../progress';
-import { isRoutineRunning } from '../routine-run';
+import { availableAddOns, isRoutineRunning } from '../routine-run';
+import { totalLeft } from '../timer';
 import {
+  finishAddOn,
   finishRoutine,
   missedSteps,
   openRoutine,
@@ -9,10 +11,11 @@ import {
   resumeStep,
   rollover,
   setResultFace,
+  startAddOn,
   tick,
   toggleStep,
 } from '../today';
-import { T0, makeState, min, sec } from './fixtures';
+import { T0, makeState, min, morning, sec } from './fixtures';
 
 const steps = (s: ReturnType<typeof makeState>) => s.runs.morning.steps;
 
@@ -319,5 +322,93 @@ describe('setResultFace', () => {
     let s = setResultFace(finished(), 'morning', 'unicorn');
     s = finishRoutine(s, 'morning', T0 + min(5));
     expect(s.results.morning.faceOverride).toBeNull();
+  });
+});
+
+describe('add-ons', () => {
+  const poop = { id: 'poop', emoji: '💩', label: 'Poop', mins: 5 };
+  const withPoop = () => makeState({ routines: [{ ...morning, addOns: [poop] }] });
+  const opened = () => openRoutine(withPoop(), 'morning', T0);
+
+  it('starts the add-on, pauses the running step and adds its time to "All steps"', () => {
+    const s = startAddOn(opened(), 'morning', 'poop', T0 + min(1));
+    const run = s.runs.morning;
+    expect(run.addOns).toEqual([
+      { addOnId: 'poop', emoji: '💩', label: 'Poop', mins: 5, startedAt: T0 + min(1), doneAt: null },
+    ]);
+    expect(run.steps.wake).toEqual({ consumedMs: min(1), startedAt: null, doneAt: null });
+    // 9 min of steps + 5 min add-on − 1 min elapsed
+    expect(totalLeft(morning, run, T0 + min(1))).toBe(780);
+    expect(isRoutineRunning(run)).toBe(true);
+  });
+
+  it('ignores step taps and other add-ons while one runs', () => {
+    const s = startAddOn(opened(), 'morning', 'poop', T0 + min(1));
+    expect(toggleStep(s, 'morning', 'wake', T0 + min(2))).toBe(s);
+    expect(startAddOn(s, 'morning', 'poop', T0 + min(2))).toBe(s);
+    expect(tick(s, T0 + min(3)).runs.morning.steps.wake.startedAt).toBeNull();
+  });
+
+  it('done resumes the max step where it left off', () => {
+    let s = startAddOn(opened(), 'morning', 'poop', T0 + min(1));
+    s = finishAddOn(s, 'morning', T0 + min(4));
+    expect(s.runs.morning.addOns[0].doneAt).toBe(T0 + min(4));
+    expect(s.runs.morning.steps.wake).toEqual({ consumedMs: min(1), startedAt: T0 + min(4), doneAt: null });
+  });
+
+  it('is ignored in focus mode, running or paused', () => {
+    const atTeethPoop = toggleStep(opened(), 'morning', 'wake', T0 + min(1));
+    let s = toggleStep(atTeethPoop, 'morning', 'teeth', T0 + min(1));
+    expect(startAddOn(s, 'morning', 'poop', T0 + min(1.5))).toBe(s);
+    s = pauseStep(s, 'morning', T0 + min(1.5));
+    expect(startAddOn(s, 'morning', 'poop', T0 + min(2))).toBe(s);
+  });
+
+  it('can start while an exact step waits for a tap', () => {
+    const atTeethPoop = toggleStep(opened(), 'morning', 'wake', T0 + min(1));
+    const s = startAddOn(atTeethPoop, 'morning', 'poop', T0 + min(2));
+    expect(s.runs.morning.addOns).toHaveLength(1);
+    expect(toggleStep(s, 'morning', 'teeth', T0 + min(3))).toBe(s);
+  });
+
+  it('can be used once per run, and its time stays added after finishing early', () => {
+    let s = startAddOn(opened(), 'morning', 'poop', T0);
+    s = finishAddOn(s, 'morning', T0 + min(1));
+    expect(availableAddOns({ ...morning, addOns: [poop] }, s.runs.morning)).toEqual([]);
+    expect(startAddOn(s, 'morning', 'poop', T0 + min(1))).toBe(s);
+    expect(totalLeft(morning, s.runs.morning, T0 + min(1))).toBe((9 + 5 - 1) * 60);
+  });
+
+  it('lists only the add-ons not used yet', () => {
+    const snack = { id: 'snack', emoji: '🧃', label: 'Drink', mins: 2 };
+    const routine = { ...morning, addOns: [poop, snack] };
+    let s = openRoutine(makeState({ routines: [routine] }), 'morning', T0);
+    expect(availableAddOns(routine, s.runs.morning)).toEqual([poop, snack]);
+    s = startAddOn(s, 'morning', 'poop', T0);
+    expect(availableAddOns(routine, s.runs.morning)).toEqual([snack]);
+  });
+
+  it('its time helps the rating: on time thanks to the add-on', () => {
+    // Everything done at 12 min, 3 min over the steps, but a 5 min poop was used.
+    let s = startAddOn(opened(), 'morning', 'poop', T0);
+    s = finishAddOn(s, 'morning', T0 + min(5));
+    s = toggleStep(s, 'morning', 'wake', T0 + min(6));
+    s = toggleStep(s, 'morning', 'teeth', T0 + min(6));
+    s = toggleStep(tick(s, T0 + min(8)), 'morning', 'dress', T0 + min(12));
+    expect(finishRoutine(s, 'morning', T0 + min(12)).results.morning).toMatchObject({
+      rating: 'good',
+      overtimeSecs: 0,
+    });
+  });
+
+  it('finishing the routine ends a running add-on', () => {
+    const s = finishRoutine(startAddOn(opened(), 'morning', 'poop', T0), 'morning', T0 + min(2));
+    expect(s.runs.morning.addOns[0].doneAt).toBe(T0 + min(2));
+    expect(isRoutineRunning(s.runs.morning)).toBe(false);
+  });
+
+  it('ignores unknown add-ons', () => {
+    const s = opened();
+    expect(startAddOn(s, 'morning', 'nope', T0 + min(1))).toBe(s);
   });
 });

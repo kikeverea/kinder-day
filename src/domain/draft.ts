@@ -1,6 +1,7 @@
 /** Pure editing operations for the routine editor's local draft (saved with `upsertRoutine`). */
 import {
   ALL_DAYS,
+  DEFAULT_ADD_ON_MINS,
   DEFAULT_STEP_MINS,
   MAX_BUFFER_MINS,
   MAX_STEP_MINS,
@@ -10,7 +11,7 @@ import {
 } from './constants';
 import { uid } from './ids';
 import { moveItem, sortDays } from './schedule';
-import type { DayOfWeek, Routine, Step, StepMode } from './types';
+import type { AddOn, DayOfWeek, Routine, Step, StepMode } from './types';
 
 export type RoutineDraft = Routine & { isNew: boolean };
 
@@ -34,6 +35,7 @@ export const newDraft = (existingCount: number): RoutineDraft => ({
   color: ROUTINE_COLORS[existingCount % ROUTINE_COLORS.length],
   days: [...ALL_DAYS],
   steps: [],
+  addOns: [],
   isNew: true,
 });
 
@@ -41,6 +43,7 @@ export const draftFromRoutine = (routine: Routine): RoutineDraft => ({
   ...routine,
   days: [...routine.days],
   steps: routine.steps.map((s) => ({ ...s })),
+  addOns: routine.addOns.map((a) => ({ ...a })),
   isNew: false,
 });
 
@@ -104,4 +107,29 @@ export const removeStep = (draft: RoutineDraft, stepId: string): RoutineDraft =>
 export const moveStep = (draft: RoutineDraft, from: number, to: number): RoutineDraft => ({
   ...draft,
   steps: moveItem(draft.steps, from, to),
+});
+
+/** The "Add an add-on…" box. */
+export type NewAddOn = Omit<AddOn, 'id'>;
+
+export const EMPTY_NEW_ADD_ON: NewAddOn = { emoji: '🚽', label: '', mins: DEFAULT_ADD_ON_MINS };
+
+/** Adds the add-on if it has a label; returns the same draft otherwise. */
+export const addAddOn = (draft: RoutineDraft, addOn: NewAddOn): RoutineDraft => {
+  const label = addOn.label.trim();
+  if (!label) return draft;
+  return {
+    ...draft,
+    addOns: [...draft.addOns, { ...addOn, id: uid(), label, mins: clampMins(addOn.mins) }],
+  };
+};
+
+export const updateAddOnMins = (draft: RoutineDraft, addOnId: string, mins: number): RoutineDraft => ({
+  ...draft,
+  addOns: draft.addOns.map((a) => (a.id === addOnId ? { ...a, mins: clampMins(mins) } : a)),
+});
+
+export const removeAddOn = (draft: RoutineDraft, addOnId: string): RoutineDraft => ({
+  ...draft,
+  addOns: draft.addOns.filter((a) => a.id !== addOnId),
 });

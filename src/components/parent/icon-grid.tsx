@@ -8,15 +8,17 @@ import { colors } from '@/theme/tokens';
 const COLUMNS = 6;
 const GAP = 8;
 
-/** 6-column grid of the 30 icons; the selected one gets an ink ring. */
+/** 6-column grid of icons (the 30 routine/step icons by default); the selected one gets an ink ring. */
 export function IconGrid({
   value,
   onChange,
   emojiSize = 26,
+  icons = ICONS,
 }: {
   value: string;
   onChange: (emoji: string) => void;
   emojiSize?: number;
+  icons?: readonly string[];
 }) {
   const [width, setWidth] = useState(0);
   // Floor so six cells plus gaps never exceed the row (float rounding would wrap the 6th),
@@ -26,7 +28,7 @@ export function IconGrid({
   return (
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {cell > 0 &&
-        ICONS.map((emoji) => {
+        icons.map((emoji) => {
           const on = emoji === value;
           return (
             <Pressable
@@ -44,7 +46,7 @@ export function IconGrid({
         })}
       {/* Pad the last row so space-between doesn't spread a partial row. */}
       {cell > 0 &&
-        Array.from({ length: (COLUMNS - (ICONS.length % COLUMNS)) % COLUMNS }, (_, i) => (
+        Array.from({ length: (COLUMNS - (icons.length % COLUMNS)) % COLUMNS }, (_, i) => (
           <View key={`pad-${i}`} style={{ width: cell }} />
         ))}
     </View>

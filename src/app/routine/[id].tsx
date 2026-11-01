@@ -8,6 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
+import { AddOnCard } from '@/components/kid/add-on-card';
+import { AddOnChips } from '@/components/kid/add-on-chips';
 import { BigButton } from '@/components/kid/big-button';
 import { FocusCard } from '@/components/kid/focus-card';
 import { ProgressBar } from '@/components/kid/progress-bar';
@@ -16,7 +18,8 @@ import { StickerPressable } from '@/components/kid/sticker-pressable';
 import { TimerCard } from '@/components/kid/timer-card';
 import { progressLabel } from '@/domain/format';
 import { completion } from '@/domain/progress';
-import { focusState, stepRow, timerCard, totalLeft } from '@/domain/timer';
+import { availableAddOns } from '@/domain/routine-run';
+import { addOnState, focusState, stepRow, timerCard, totalLeft } from '@/domain/timer';
 import { useNow } from '@/hooks/use-now';
 import { useAppStore } from '@/store';
 import { routineTint } from '@/theme/color';
@@ -32,6 +35,8 @@ export default function RoutineChecklist() {
   const pauseStep = useAppStore((s) => s.pauseStep);
   const resumeStep = useAppStore((s) => s.resumeStep);
   const finishRoutine = useAppStore((s) => s.finishRoutine);
+  const startAddOn = useAppStore((s) => s.startAddOn);
+  const finishAddOn = useAppStore((s) => s.finishAddOn);
   const now = useNow(1000);
 
   useEffect(() => {
@@ -45,10 +50,16 @@ export default function RoutineChecklist() {
   const allDone = total > 0 && done === total;
   const focus = focusState(routine, run, now);
   const card = timerCard(routine, run, now);
+  const addOn = addOnState(run, now);
 
   const onStep = (stepId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     toggleStep(routine.id, stepId);
+  };
+
+  const onAddOn = (addOnId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    startAddOn(routine.id, addOnId);
   };
 
   const onFinish = () => {
@@ -86,7 +97,16 @@ export default function RoutineChecklist() {
         {card ? <TimerCard card={card} totalLeft={totalLeft(routine, run, now)} color={routine.color} /> : null}
       </View>
 
-      {focus ? (
+      {addOn ? (
+        <>
+          <View style={styles.focus}>
+            <AddOnCard addOn={addOn} totalLeft={totalLeft(routine, run, now)} color={routine.color} />
+          </View>
+          <View style={[styles.footer, { backgroundColor: tint }]}>
+            <BigButton label="I'm done! ✓" onPress={() => finishAddOn(routine.id)} />
+          </View>
+        </>
+      ) : focus ? (
         <View style={styles.focus}>
           <FocusCard
             focus={focus}
@@ -112,6 +132,7 @@ export default function RoutineChecklist() {
             </LayoutAnimationConfig>
           </ScrollView>
           <View style={[styles.footer, { backgroundColor: tint }]}>
+            {allDone ? null : <AddOnChips addOns={availableAddOns(routine, run)} onPick={onAddOn} />}
             <BigButton
               label={allDone ? 'I did it! 🎉' : "I'm finished"}
               onPress={onFinish}
@@ -151,5 +172,5 @@ const styles = StyleSheet.create({
   top: { paddingHorizontal: spacing.screenX, paddingTop: 22, paddingBottom: 6, gap: 8 },
   focus: { flex: 1, paddingHorizontal: spacing.screenX, paddingTop: 14, paddingBottom: 24 },
   list: { paddingHorizontal: spacing.screenX, paddingTop: 10, paddingBottom: 8, gap: spacing.kidListGap },
-  footer: { paddingHorizontal: spacing.screenX, paddingTop: 12, paddingBottom: 18 },
+  footer: { gap: 12, paddingHorizontal: spacing.screenX, paddingTop: 12, paddingBottom: 18 },
 });

@@ -1,5 +1,5 @@
 /** Derived, display-ready timer values for the checklist screen. */
-import { currentStep, elapsedMs, focusStep } from './routine-run';
+import { activeAddOn, addOnsMs, currentStep, elapsedMs, focusStep } from './routine-run';
 import {
   isDone,
   isRunning,
@@ -24,13 +24,13 @@ export type TimerCard = {
   state: 'running' | 'overtime' | 'waiting';
 };
 
-/** The small timer card above the list. Undefined in focus mode or when everything is done. */
+/** The small timer card above the list. Undefined in focus mode, during an add-on or when everything is done. */
 export const timerCard = (
   routine: Routine,
   run: RoutineRun | undefined,
   now: number,
 ): TimerCard | undefined => {
-  if (focusStep(routine, run)) return undefined;
+  if (focusStep(routine, run) || activeAddOn(run)) return undefined;
   const step = currentStep(routine, run);
   if (!step) return undefined;
   const total = stepTotalMs(step);
@@ -45,15 +45,42 @@ export const timerCard = (
 };
 
 /**
- * "⏱️ All steps": total step time (with exact steps' buffers) minus the routine's elapsed time,
- * so it keeps running while an exact step waits for a tap or is paused. Negative when over time
- * (shown as "+m:ss").
+ * "⏱️ All steps": total step time (with exact steps' buffers and the add-ons used) minus the
+ * routine's elapsed time, so it keeps running while an exact step waits for a tap or is paused.
+ * Negative when over time (shown as "+m:ss").
  */
 export const totalLeft = (routine: Routine, run: RoutineRun | undefined, now: number) =>
   toSecs(
-    routine.steps.reduce((sum, s) => sum + stepAllowanceMins(s), 0) * 60_000 -
+    routine.steps.reduce((sum, s) => sum + stepAllowanceMins(s), 0) * 60_000 +
+      addOnsMs(run) -
       (run ? elapsedMs(run, now) : 0),
   );
+
+export type AddOnState = {
+  emoji: string;
+  label: string;
+  /** Seconds left; negative once it runs over. */
+  left: number;
+  /** 0–1 time remaining (ring fill). */
+  fraction: number;
+  /** Past its time: shows 😬. */
+  overtime: boolean;
+};
+
+/** The running add-on's card. Undefined when none is running. */
+export const addOnState = (run: RoutineRun | undefined, now: number): AddOnState | undefined => {
+  const a = activeAddOn(run);
+  if (!a) return undefined;
+  const total = a.mins * 60_000;
+  const left = total - (now - a.startedAt);
+  return {
+    emoji: a.emoji,
+    label: a.label,
+    left: toSecs(left),
+    fraction: Math.max(0, left) / total,
+    overtime: left <= 0,
+  };
+};
 
 export type StepRow = {
   status: 'idle' | 'running' | 'paused' | 'done';

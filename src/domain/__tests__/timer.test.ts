@@ -1,4 +1,4 @@
-import { cheerFor, focusState, stepRow, timerCard, totalLeft } from '../timer';
+import { addOnState, cheerFor, focusState, stepRow, timerCard, totalLeft } from '../timer';
 import type { RoutineRun, StepRun } from '../types';
 import { T0, buffered, min, morning, sec } from './fixtures';
 
@@ -6,6 +6,7 @@ const run = (steps: Record<string, Partial<StepRun>> = {}): RoutineRun => ({
   openedAt: T0,
   finishedAt: null,
   stoppedMs: 0,
+  addOns: [],
   steps: Object.fromEntries(
     Object.entries(steps).map(([id, sr]) => [id, { consumedMs: 0, startedAt: null, doneAt: null, ...sr }]),
   ),
@@ -138,3 +139,22 @@ it.each([
   [0.1, 'Last few seconds! ✨'],
   [0, 'Last few seconds! ✨'],
 ])('cheerFor(%f) → %s', (fraction, cheer) => expect(cheerFor(fraction)).toBe(cheer));
+
+describe('addOnState', () => {
+  const use = { addOnId: 'poop', emoji: '💩', label: 'Poop', mins: 5, startedAt: T0, doneAt: null };
+
+  it('is undefined without a running add-on', () => {
+    expect(addOnState(run(), T0)).toBeUndefined();
+    expect(addOnState({ ...run(), addOns: [{ ...use, doneAt: T0 + min(1) }] }, T0 + min(2))).toBeUndefined();
+  });
+
+  it('counts down, then runs over', () => {
+    const r = { ...run(), addOns: [use] };
+    expect(addOnState(r, T0 + min(1))).toMatchObject({ label: 'Poop', left: 240, fraction: 0.8, overtime: false });
+    expect(addOnState(r, T0 + min(6))).toMatchObject({ left: -60, fraction: 0, overtime: true });
+  });
+
+  it('hides the timer card while it runs', () => {
+    expect(timerCard(morning, { ...run(), addOns: [use] }, T0)).toBeUndefined();
+  });
+});

@@ -23,6 +23,9 @@ export type AppState = AppData & {
   /** Focus-mode ⏸ Pause / ▶ Resume. */
   pauseStep(routineId: string, now?: number): void;
   resumeStep(routineId: string, now?: number): void;
+  /** Something came up: start an add-on / tap done on it. */
+  startAddOn(routineId: string, addOnId: string, now?: number): void;
+  finishAddOn(routineId: string, now?: number): void;
   finishRoutine(routineId: string, now?: number): void;
   resetToday(now?: number): void;
   /** Grown-up override of today's result face; null restores the computed one. */
@@ -43,7 +46,7 @@ export type AppState = AppData & {
 type PersistedState = AppData;
 
 export const STORAGE_KEY = 'kinder-day.state';
-const STORAGE_VERSION = 10;
+const STORAGE_VERSION = 11;
 
 /** Upgrades persisted data from older `STORAGE_VERSION`s. Steps run in order. */
 export const migrate = (persisted: unknown, version: number): PersistedState => {
@@ -106,6 +109,13 @@ export const migrate = (persisted: unknown, version: number): PersistedState => 
     // v10: saved steps for reuse.
     state = { ...state, stepTemplates: state.stepTemplates ?? [] };
   }
+  if (version < 11) {
+    // v11: routines have add-ons; runs record the add-ons used.
+    const routines = (state.routines ?? []).map((r) => ({ ...r, addOns: r.addOns ?? [] }));
+    const runs: PersistedState['runs'] = {};
+    for (const [id, run] of Object.entries(state.runs ?? {})) runs[id] = { ...run, addOns: run.addOns ?? [] };
+    state = { ...state, routines, runs };
+  }
   return state;
 };
 
@@ -150,6 +160,9 @@ export const createAppStore = (storage: KeyValueStorage) =>
           pauseStep: (routineId, now = Date.now()) => apply((s) => today.pauseStep(s, routineId, now)),
           resumeStep: (routineId, now = Date.now()) =>
             apply((s) => today.resumeStep(s, routineId, now)),
+          startAddOn: (routineId, addOnId, now = Date.now()) =>
+            apply((s) => today.startAddOn(s, routineId, addOnId, now)),
+          finishAddOn: (routineId, now = Date.now()) => apply((s) => today.finishAddOn(s, routineId, now)),
           finishRoutine: (routineId, now = Date.now()) =>
             apply((s) => today.finishRoutine(s, routineId, now)),
           resetToday: (now = Date.now()) => apply((s) => today.resetToday(s, now)),

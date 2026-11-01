@@ -162,3 +162,16 @@ it('persists saved steps', () => {
   store.getState().saveStepTemplate({ emoji: '📚', label: 'Read', mins: 10, mode: 'exact', beforeMins: 1, afterMins: 0 });
   expect(persisted(storage).state.stepTemplates).toMatchObject([{ label: 'Read', mins: 10 }]);
 });
+
+it('migrates v10: routines and runs gain add-ons', () => {
+  const data = createInitialData(Date.now());
+  const v10 = {
+    ...data,
+    routines: data.routines.map(({ addOns: _a, ...r }) => r),
+    runs: { morning: { openedAt: 1, finishedAt: null, stoppedMs: 0, steps: {} } },
+  };
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v10, version: 10 }) });
+  const state = createAppStore(storage).getState();
+  expect(state.routines.every((r) => Array.isArray(r.addOns))).toBe(true);
+  expect(state.runs.morning.addOns).toEqual([]);
+});

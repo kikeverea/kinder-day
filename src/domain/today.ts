@@ -5,7 +5,7 @@
 import { dayKey } from './day';
 import { archiveDay, pruneHistory } from './history';
 import { completion, rate } from './progress';
-import { advance, focusStep, settle } from './routine-run';
+import { activeAddOn, advance, availableAddOns, endAddOn, focusStep, settle } from './routine-run';
 import {
   completeStep,
   IDLE_STEP,
@@ -64,7 +64,7 @@ export const openRoutine = <S extends AppData>(state: S, routineId: string, now:
   if (!routine) return s;
   const existing = s.runs[routineId];
   const run: RoutineRun = !existing
-    ? { openedAt: now, finishedAt: null, stoppedMs: 0, steps: {} }
+    ? { openedAt: now, finishedAt: null, stoppedMs: 0, steps: {}, addOns: [] }
     : existing.finishedAt !== null
       ? { ...existing, finishedAt: null, stoppedMs: existing.stoppedMs + now - existing.finishedAt }
       : existing;
@@ -86,6 +86,7 @@ const updateRun = <S extends AppData>(
 
 /**
  * Tap on a step row.
+ * - An add-on is running: every tap is ignored.
  * - Focus mode (an exact step started and not done, running or paused): every tap is ignored.
  * - max step, not done: completes it; the next step becomes current.
  * - max step, done: un-does it; it resumes with the time it had left.
@@ -100,7 +101,7 @@ export const toggleStep = <S extends AppData>(
 ): S =>
   updateRun(state, routineId, now, (routine, run) => {
     const step = routine.steps.find((x) => x.id === stepId);
-    if (!step || focusStep(routine, run)) return run;
+    if (!step || focusStep(routine, run) || activeAddOn(run)) return run;
     const sr = stepRunOf(run, stepId);
 
     let next: StepRun;
@@ -123,8 +124,36 @@ export const resumeStep = <S extends AppData>(state: S, routineId: string, now: 
   updateRun(state, routineId, now, (routine, run) => {
     const focus = focusStep(routine, run);
     const sr = focus && stepRunOf(run, focus.id);
-    return focus && sr && !isRunning(sr) ? withStep(run, focus.id, startStep(sr, now)) : run;
+    return focus && sr && !isRunning(sr) && !activeAddOn(run)
+      ? withStep(run, focus.id, startStep(sr, now))
+      : run;
   });
+
+/**
+ * Kid taps an add-on (something came up): its minutes are added to the routine's total and its
+ * timer starts, pausing the running max step. Each add-on can be used once per run. Ignored when
+ * already used, while another add-on runs and in focus mode (add-ons are hidden while an exact
+ * step's timer is on screen).
+ */
+export const startAddOn = <S extends AppData>(
+  state: S,
+  routineId: string,
+  addOnId: string,
+  now: number,
+): S =>
+  updateRun(state, routineId, now, (routine, run) => {
+    const addOn = availableAddOns(routine, run).find((a) => a.id === addOnId);
+    if (!addOn || activeAddOn(run) || focusStep(routine, run)) return run;
+    const { emoji, label, mins } = addOn;
+    const use = { addOnId, emoji, label, mins, startedAt: now, doneAt: null };
+    return settle(routine, { ...run, addOns: [...run.addOns, use] }, now);
+  });
+
+/** Kid taps done on the running add-on: the routine carries on (the current max step resumes by itself). */
+export const finishAddOn = <S extends AppData>(state: S, routineId: string, now: number): S =>
+  updateRun(state, routineId, now, (routine, run) =>
+    activeAddOn(run) ? settle(routine, endAddOn(run, now), now) : run,
+  );
 
 /** "I'm finished": always allowed; records today's result and stops the routine's clock. */
 export const finishRoutine = <S extends AppData>(state: S, routineId: string, now: number): S => {
@@ -134,7 +163,7 @@ export const finishRoutine = <S extends AppData>(state: S, routineId: string, no
   const run = s.runs[routineId];
   const { done, total } = completion(routine, run);
   const overtimeSecs = Math.max(0, -totalLeft(routine, run, now));
-  const stopped = run && settle(routine, { ...run, finishedAt: now }, now);
+  const stopped = run && settle(routine, { ...endAddOn(run, now), finishedAt: now }, now);
   return {
     ...(stopped ? withRun(s, routineId, stopped) : s),
     results: {

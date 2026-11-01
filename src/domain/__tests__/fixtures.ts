@@ -18,6 +18,7 @@ export const morning: Routine = {
     { id: 'teeth', emoji: '🪥', label: 'Brush my teeth', mins: 2, mode: 'exact', beforeMins: 0, afterMins: 0 },
     { id: 'dress', emoji: '👕', label: 'Put on my clothes', mins: 5, mode: 'max', beforeMins: 0, afterMins: 0 },
   ],
+  addOns: [],
 };
 
 export const school: Routine = {
@@ -27,6 +28,7 @@ export const school: Routine = {
   color: '#8FE3B8',
   days: [1, 2, 3, 4, 5],
   steps: [{ id: 'snack', emoji: '🍎', label: 'Have a snack', mins: 10, mode: 'max', beforeMins: 0, afterMins: 0 }],
+  addOns: [],
 };
 
 /** Morning with 3 min of buffers around Brush my teeth (12 min total). */

@@ -1,6 +1,6 @@
 import { ALL_DAYS, WEEKDAYS } from './constants';
 import { uid } from './ids';
-import type { Routine, Settings, Step, StepMode } from './types';
+import type { AddOn, Routine, Settings, Step, StepMode } from './types';
 
 const step = (emoji: string, label: string, mins: number, mode: StepMode = 'max'): Step => ({
   id: uid(),
@@ -11,6 +11,8 @@ const step = (emoji: string, label: string, mins: number, mode: StepMode = 'max'
   beforeMins: 0,
   afterMins: 0,
 });
+
+const poop = (): AddOn => ({ id: uid(), emoji: '💩', label: 'Poop', mins: 5 });
 
 export const createSeedRoutines = (): Routine[] => [
   {
@@ -28,6 +30,7 @@ export const createSeedRoutines = (): Routine[] => [
       step('📅', 'Check my day', 2),
       step('🎒', 'Pack my backpack', 4),
     ],
+    addOns: [poop()],
   },
   {
     id: 'school',
@@ -41,6 +44,7 @@ export const createSeedRoutines = (): Routine[] => [
       step('🎒', 'Empty my backpack', 3),
       step('📚', 'Homework time', 20),
     ],
+    addOns: [],
   },
   {
     id: 'bed',
@@ -55,6 +59,7 @@ export const createSeedRoutines = (): Routine[] => [
       step('📖', 'Story time', 10),
       step('🛏️', 'Lights out', 1),
     ],
+    addOns: [poop()],
   },
 ];
 
