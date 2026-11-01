@@ -2,21 +2,25 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
-import type { Step } from '@/domain/types';
+import type { StepMode } from '@/domain/types';
 import { colors } from '@/theme/tokens';
 
-type Props = {
-  templates: Step[];
-  onPick: (template: Step) => void;
+type Saved = { id: string; emoji: string; label: string; mins: number; mode?: StepMode };
+
+type Props<T extends Saved> = {
+  /** "saved steps" / "saved add-ons": the title and the remove prompt. */
+  noun: string;
+  templates: T[];
+  onPick: (template: T) => void;
   onDelete: (templateId: string) => void;
 };
 
-/** "Saved steps" chips in the Add box: tap adds that step to the routine, hold offers to remove it. */
-export function SavedSteps({ templates, onPick, onDelete }: Props) {
+/** Saved steps or add-ons in an Add box: tap adds a copy to the routine, hold offers to remove it. */
+export function SavedChips<T extends Saved>({ noun, templates, onPick, onDelete }: Props<T>) {
   if (templates.length === 0) return null;
 
-  const confirmDelete = (t: Step) =>
-    Alert.alert(`Remove “${t.label}” from saved steps?`, 'Routines that already use it keep it.', [
+  const confirmDelete = (t: T) =>
+    Alert.alert(`Remove “${t.label}” from ${noun}?`, 'Routines that already use it keep it.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => onDelete(t.id) },
     ]);
@@ -24,7 +28,7 @@ export function SavedSteps({ templates, onPick, onDelete }: Props) {
   return (
     <View style={styles.section}>
       <AppText size={13} color={colors.muted}>
-        Saved steps · tap to add, hold to remove
+        {noun[0].toUpperCase() + noun.slice(1)} · tap to add, hold to remove
       </AppText>
       <View style={styles.chips}>
         {templates.map((t) => (
@@ -34,10 +38,10 @@ export function SavedSteps({ templates, onPick, onDelete }: Props) {
             onLongPress={() => confirmDelete(t)}
             accessibilityRole="button"
             accessibilityLabel={`Add ${t.label}`}
-            accessibilityHint="Hold to remove it from saved steps"
+            accessibilityHint={`Hold to remove it from ${noun}`}
             style={({ pressed }) => [
               styles.chip,
-              { borderColor: colors.mode[t.mode].border },
+              { borderColor: t.mode ? colors.mode[t.mode].border : colors.parentBorder },
               pressed && styles.pressed,
             ]}>
             <Emoji size={18}>{t.emoji}</Emoji>

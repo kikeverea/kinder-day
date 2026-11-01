@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import * as routines from '@/domain/routines';
-import type { NewStep } from '@/domain/draft';
+import type { NewAddOn, NewStep } from '@/domain/draft';
 import { createSeedRoutines, DEFAULT_SETTINGS } from '@/domain/seed';
 import * as templates from '@/domain/templates';
 import * as today from '@/domain/today';
@@ -39,6 +39,8 @@ export type AppState = AppData & {
   /** Saved steps the editor can reuse (saved immediately, independent of the routine's Save). */
   saveStepTemplate(step: NewStep): void;
   deleteStepTemplate(templateId: string): void;
+  saveAddOnTemplate(addOn: NewAddOn): void;
+  deleteAddOnTemplate(templateId: string): void;
 
   updateSettings(patch: Partial<Settings>): void;
 };
@@ -46,7 +48,7 @@ export type AppState = AppData & {
 type PersistedState = AppData;
 
 export const STORAGE_KEY = 'kinder-day.state';
-const STORAGE_VERSION = 11;
+const STORAGE_VERSION = 12;
 
 /** Upgrades persisted data from older `STORAGE_VERSION`s. Steps run in order. */
 export const migrate = (persisted: unknown, version: number): PersistedState => {
@@ -116,6 +118,10 @@ export const migrate = (persisted: unknown, version: number): PersistedState => 
     for (const [id, run] of Object.entries(state.runs ?? {})) runs[id] = { ...run, addOns: run.addOns ?? [] };
     state = { ...state, routines, runs };
   }
+  if (version < 12) {
+    // v12: saved add-ons for reuse.
+    state = { ...state, addOnTemplates: state.addOnTemplates ?? [] };
+  }
   return state;
 };
 
@@ -126,6 +132,7 @@ export const createInitialData = (now = Date.now()): AppData => ({
   settings: DEFAULT_SETTINGS,
   history: {},
   stepTemplates: [],
+  addOnTemplates: [],
 });
 
 export const createAppStore = (storage: KeyValueStorage) =>
@@ -177,6 +184,8 @@ export const createAppStore = (storage: KeyValueStorage) =>
           reorderDay: (day, routineIds) => apply((s) => routines.reorderDay(s, day, routineIds)),
           saveStepTemplate: (step) => apply((s) => templates.saveStepTemplate(s, step)),
           deleteStepTemplate: (templateId) => apply((s) => templates.deleteStepTemplate(s, templateId)),
+          saveAddOnTemplate: (addOn) => apply((s) => templates.saveAddOnTemplate(s, addOn)),
+          deleteAddOnTemplate: (templateId) => apply((s) => templates.deleteAddOnTemplate(s, templateId)),
 
           updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
         };
@@ -195,6 +204,7 @@ export const createAppStore = (storage: KeyValueStorage) =>
           settings,
           history,
           stepTemplates,
+          addOnTemplates,
         }) => ({
           dayKey,
           runs,
@@ -204,6 +214,7 @@ export const createAppStore = (storage: KeyValueStorage) =>
           settings,
           history,
           stepTemplates,
+          addOnTemplates,
         }),
         merge: (persisted, current) => {
           const saved = persisted as Partial<PersistedState> | undefined;

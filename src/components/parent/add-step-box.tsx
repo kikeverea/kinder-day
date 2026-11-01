@@ -13,7 +13,7 @@ import { colors, fonts } from '@/theme/tokens';
 import { IconGrid } from './icon-grid';
 import { MinutesStepper } from './minutes-stepper';
 import { ModeChip } from './mode-chip';
-import { SavedSteps } from './saved-steps';
+import { SavedChips } from './saved-chips';
 
 type Props = {
   onAdd: (step: NewStep) => void;
@@ -42,7 +42,7 @@ export function AddStepBox({ onAdd, templates, onSaveTemplate, onDeleteTemplate 
 
   return (
     <View style={styles.box}>
-      <SavedSteps templates={templates} onPick={onAdd} onDelete={onDeleteTemplate} />
+      <SavedChips noun="saved steps" templates={templates} onPick={onAdd} onDelete={onDeleteTemplate} />
       <View style={styles.row}>
         <Pressable
           onPress={() => setPicking((p) => !p)}

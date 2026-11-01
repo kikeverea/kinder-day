@@ -1,5 +1,12 @@
 import { addStep, draftFromRoutine, EMPTY_NEW_STEP } from '../draft';
-import { deleteStepTemplate, isSavedTemplate, saveStepTemplate, templateFor } from '../templates';
+import {
+  deleteAddOnTemplate,
+  deleteStepTemplate,
+  isSavedTemplate,
+  saveAddOnTemplate,
+  saveStepTemplate,
+  templateFor,
+} from '../templates';
 import { makeState, morning } from './fixtures';
 
 const [, teeth] = morning.steps;
@@ -58,4 +65,24 @@ it('a reused template becomes a new step with a fresh id', () => {
   const d = addStep(draftFromRoutine(morning), template);
   expect(d.steps[3]).toMatchObject({ label: 'Brush my teeth', mode: 'exact' });
   expect(d.steps[3].id).not.toBe(template.id);
+});
+
+describe('add-on templates', () => {
+  const poop = { emoji: '💩', label: 'Poop', mins: 5 };
+
+  it('saves, updates by label and deletes like steps', () => {
+    const s1 = saveAddOnTemplate(makeState(), { ...poop, label: ' Poop ' });
+    expect(s1.addOnTemplates).toEqual([{ id: expect.any(String), ...poop }]);
+    expect(isSavedTemplate(s1.addOnTemplates, poop)).toBe(true);
+    expect(saveAddOnTemplate(s1, poop)).toBe(s1);
+    const s2 = saveAddOnTemplate(s1, { ...poop, label: 'poop', mins: 99 });
+    expect(s2.addOnTemplates).toEqual([{ ...s1.addOnTemplates[0], label: 'poop', mins: 60 }]);
+    expect(deleteAddOnTemplate(s2, s2.addOnTemplates[0].id).addOnTemplates).toEqual([]);
+    expect(s2.stepTemplates).toBe(s1.stepTemplates);
+  });
+
+  it('a saved add-on in the editor compares without its id', () => {
+    const { addOnTemplates } = saveAddOnTemplate(makeState(), poop);
+    expect(isSavedTemplate(addOnTemplates, { ...poop, id: 'routine-copy' } as typeof poop)).toBe(true);
+  });
 });

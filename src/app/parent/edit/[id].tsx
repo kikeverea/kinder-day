@@ -48,6 +48,9 @@ export default function RoutineEditor() {
   const stepTemplates = useAppStore((s) => s.stepTemplates);
   const saveStepTemplate = useAppStore((s) => s.saveStepTemplate);
   const deleteStepTemplate = useAppStore((s) => s.deleteStepTemplate);
+  const addOnTemplates = useAppStore((s) => s.addOnTemplates);
+  const saveAddOnTemplate = useAppStore((s) => s.saveAddOnTemplate);
+  const deleteAddOnTemplate = useAppStore((s) => s.deleteAddOnTemplate);
   const [draft, setDraft] = useState<RoutineDraft>(() => {
     const { routines } = useAppStore.getState();
     const existing = routines.find((r) => r.id === id);
@@ -222,9 +225,16 @@ export default function RoutineEditor() {
                 addOn={addOn}
                 onMins={(mins) => setDraft((d) => updateAddOnMins(d, addOn.id, mins))}
                 onRemove={() => setDraft((d) => removeAddOn(d, addOn.id))}
+                saved={isSavedTemplate(addOnTemplates, addOn)}
+                onSaveTemplate={() => saveAddOnTemplate(addOn)}
               />
             ))}
-            <AddAddOnBox onAdd={(addOn) => setDraft((d) => addAddOn(d, addOn))} />
+            <AddAddOnBox
+              onAdd={(addOn) => setDraft((d) => addAddOn(d, addOn))}
+              templates={addOnTemplates}
+              onSaveTemplate={saveAddOnTemplate}
+              onDeleteTemplate={deleteAddOnTemplate}
+            />
           </View>
         </ScrollViewContainer>
 

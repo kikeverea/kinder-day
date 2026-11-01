@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
@@ -5,16 +6,27 @@ import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
 import { ADD_ON_ICONS } from '@/domain/constants';
 import { clampMins, EMPTY_NEW_ADD_ON, type NewAddOn } from '@/domain/draft';
+import { isSavedTemplate } from '@/domain/templates';
+import type { AddOn } from '@/domain/types';
 import { colors, fonts } from '@/theme/tokens';
 
 import { IconGrid } from './icon-grid';
 import { MinutesStepper } from './minutes-stepper';
+import { SavedChips } from './saved-chips';
 
-/** "Add an add-on…" box: icon picker, label and minutes. Resets after adding. */
-export function AddAddOnBox({ onAdd }: { onAdd: (addOn: NewAddOn) => void }) {
+type Props = {
+  onAdd: (addOn: NewAddOn) => void;
+  templates: AddOn[];
+  onSaveTemplate: (addOn: NewAddOn) => void;
+  onDeleteTemplate: (templateId: string) => void;
+};
+
+/** "Add an add-on…" box: saved add-ons to reuse, then icon picker, label, save for reuse and minutes. Resets after adding. */
+export function AddAddOnBox({ onAdd, templates, onSaveTemplate, onDeleteTemplate }: Props) {
   const [addOn, setAddOn] = useState<NewAddOn>(EMPTY_NEW_ADD_ON);
   const [picking, setPicking] = useState(false);
   const canAdd = addOn.label.trim().length > 0;
+  const saved = canAdd && isSavedTemplate(templates, addOn);
 
   const add = () => {
     if (!canAdd) return;
@@ -25,6 +37,7 @@ export function AddAddOnBox({ onAdd }: { onAdd: (addOn: NewAddOn) => void }) {
 
   return (
     <View style={styles.box}>
+      <SavedChips noun="saved add-ons" templates={templates} onPick={onAdd} onDelete={onDeleteTemplate} />
       <View style={styles.row}>
         <Pressable
           onPress={() => setPicking((p) => !p)}
@@ -42,6 +55,14 @@ export function AddAddOnBox({ onAdd }: { onAdd: (addOn: NewAddOn) => void }) {
           placeholderTextColor={colors.softLabel}
           style={styles.input}
         />
+        <Pressable
+          onPress={() => onSaveTemplate(addOn)}
+          disabled={!canAdd || saved}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Add-on is saved' : 'Save add-on for reuse'}
+          style={[styles.save, !canAdd && styles.disabled]}>
+          <MaterialIcons name={saved ? 'bookmark' : 'bookmark-border'} size={24} color={colors.accentMuted} />
+        </Pressable>
         <Pressable
           onPress={add}
           disabled={!canAdd}
@@ -110,6 +131,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 14,
     backgroundColor: colors.ink,
+    justifyContent: 'center',
+  },
+  save: {
+    width: 44,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: colors.parentGround,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   disabled: { opacity: 0.4 },

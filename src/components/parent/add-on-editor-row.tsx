@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -11,10 +12,13 @@ type Props = {
   addOn: AddOn;
   onMins: (mins: number) => void;
   onRemove: () => void;
+  /** The add-on is saved for reuse exactly as it is (filled bookmark). */
+  saved: boolean;
+  onSaveTemplate: () => void;
 };
 
-/** Editor add-on: icon, label, minutes and remove. Add-ons only have a time (no mode, no buffers). */
-export function AddOnEditorRow({ addOn, onMins, onRemove }: Props) {
+/** Editor add-on: icon, label, minutes, save for reuse and remove. Add-ons only have a time (no mode, no buffers). */
+export function AddOnEditorRow({ addOn, onMins, onRemove, saved, onSaveTemplate }: Props) {
   return (
     <View style={styles.row}>
       <View style={styles.icon}>
@@ -26,6 +30,14 @@ export function AddOnEditorRow({ addOn, onMins, onRemove }: Props) {
         </AppText>
         <MinutesStepper mins={addOn.mins} onChange={onMins} />
       </View>
+      <Pressable
+        onPress={onSaveTemplate}
+        disabled={saved}
+        accessibilityRole="button"
+        accessibilityLabel={saved ? `${addOn.label} is saved` : `Save ${addOn.label} for reuse`}
+        style={styles.save}>
+        <MaterialIcons name={saved ? 'bookmark' : 'bookmark-border'} size={22} color={colors.accentMuted} />
+      </Pressable>
       <Pressable onPress={onRemove} accessibilityLabel={`Remove ${addOn.label}`} style={styles.remove}>
         <AppText size={18} color={colors.dangerText}>
           ✕
@@ -58,6 +70,14 @@ const styles = StyleSheet.create({
   },
   body: { flex: 1, minWidth: 0, gap: 6 },
   label: { lineHeight: 21 },
+  save: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.parentGround,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   remove: {
     width: 40,
     height: 40,

@@ -149,4 +149,6 @@ export type AppData = TodayData & {
   history: Record<string, DayRecord>;
   /** Saved steps the editor can reuse. Ids are the template's own; a reused step gets a new id. */
   stepTemplates: Step[];
+  /** Saved add-ons the editor can reuse, like `stepTemplates`. */
+  addOnTemplates: AddOn[];
 };

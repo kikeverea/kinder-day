@@ -44,5 +44,6 @@ export const makeState = (overrides: Partial<AppData> = {}): AppData => ({
   settings: DEFAULT_SETTINGS,
   history: {},
   stepTemplates: [],
+  addOnTemplates: [],
   ...overrides,
 });

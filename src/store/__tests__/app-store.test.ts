@@ -175,3 +175,12 @@ it('migrates v10: routines and runs gain add-ons', () => {
   expect(state.routines.every((r) => Array.isArray(r.addOns))).toBe(true);
   expect(state.runs.morning.addOns).toEqual([]);
 });
+
+it('migrates v11 and persists saved add-ons', () => {
+  const { addOnTemplates: _t, ...v11 } = createInitialData(Date.now());
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v11, version: 11 }) });
+  const store = createAppStore(storage);
+  expect(store.getState().addOnTemplates).toEqual([]);
+  store.getState().saveAddOnTemplate({ emoji: '💩', label: 'Poop', mins: 5 });
+  expect(persisted(storage).state.addOnTemplates).toMatchObject([{ label: 'Poop', mins: 5 }]);
+});
