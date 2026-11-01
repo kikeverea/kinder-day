@@ -11,6 +11,7 @@ import {
   resumeStep,
   rollover,
   setResultFace,
+  setResultSticker,
   startAddOn,
   tick,
   toggleStep,
@@ -203,6 +204,7 @@ describe('finishRoutine', () => {
       secs: 480,
       overtimeSecs: 0,
       faceOverride: null,
+      sticker: null,
     });
   });
 
@@ -301,9 +303,9 @@ describe('setResultFace', () => {
   const finished = () => finishRoutine(atTeeth(), 'morning', T0 + min(4)); // regular
 
   it("overrides the face shown, keeping the computed rating", () => {
-    const s = setResultFace(finished(), 'morning', 'unicorn');
-    expect(s.results.morning).toMatchObject({ rating: 'regular', faceOverride: 'unicorn' });
-    expect(resultFace(s.results.morning)).toBe('unicorn');
+    const s = setResultFace(finished(), 'morning', 'angry');
+    expect(s.results.morning).toMatchObject({ rating: 'regular', faceOverride: 'angry' });
+    expect(resultFace(s.results.morning)).toBe('angry');
   });
 
   it('null restores the computed face', () => {
@@ -318,10 +320,27 @@ describe('setResultFace', () => {
     expect(setResultFace(f, 'morning', null)).toBe(f);
   });
 
-  it('finishing again clears the override', () => {
-    let s = setResultFace(finished(), 'morning', 'unicorn');
+  it('finishing again clears the override and the sticker', () => {
+    let s = setResultSticker(setResultFace(finished(), 'morning', 'angry'), 'morning', '🦄');
     s = finishRoutine(s, 'morning', T0 + min(5));
-    expect(s.results.morning.faceOverride).toBeNull();
+    expect(s.results.morning).toMatchObject({ faceOverride: null, sticker: null });
+  });
+});
+
+describe('setResultSticker', () => {
+  const finished = () => finishRoutine(atTeeth(), 'morning', T0 + min(4)); // regular
+
+  it('gives and removes a sticker, keeping the face', () => {
+    const s = setResultSticker(finished(), 'morning', '🦄');
+    expect(s.results.morning).toMatchObject({ rating: 'regular', faceOverride: null, sticker: '🦄' });
+    expect(setResultSticker(s, 'morning', null).results.morning.sticker).toBeNull();
+  });
+
+  it('is a no-op without a result or when unchanged', () => {
+    const s = atTeeth();
+    expect(setResultSticker(s, 'morning', '🦄')).toBe(s);
+    const f = finished();
+    expect(setResultSticker(f, 'morning', null)).toBe(f);
   });
 });
 

@@ -1,4 +1,5 @@
-import { StyleSheet, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
@@ -13,15 +14,29 @@ type Props = {
   done: number;
   total: number;
   status: string;
+  /** Result face; with a result, the face and sticker buttons show. */
   badge?: string;
-  /** Opens the face picker (finished routines only). */
-  onPress?: () => void;
+  /** Reward sticker given to the result, if any. */
+  sticker?: string | null;
+  onFacePress: () => void;
+  onStickerPress: () => void;
 };
 
-/** Parent · Today: one of today's routines with its progress and result. */
-export function TodayRow({ name, emoji, color, done, total, status, badge, onPress }: Props) {
+/** Parent · Today: one of today's routines with its progress and result (face, then sticker below). */
+export function TodayRow({
+  name,
+  emoji,
+  color,
+  done,
+  total,
+  status,
+  badge,
+  sticker,
+  onFacePress,
+  onStickerPress,
+}: Props) {
   return (
-    <Card onPress={onPress} accessibilityLabel={onPress ? `${name}: change result face` : undefined}>
+    <Card>
       <View style={[styles.icon, { backgroundColor: color }]}>
         <Emoji size={28}>{emoji}</Emoji>
       </View>
@@ -46,7 +61,30 @@ export function TodayRow({ name, emoji, color, done, total, status, badge, onPre
           {status}
         </AppText>
       </View>
-      <View style={styles.badge}>{badge ? <Emoji size={30}>{badge}</Emoji> : null}</View>
+      {badge ? (
+        <View style={styles.result}>
+          <Pressable
+            onPress={onFacePress}
+            accessibilityRole="button"
+            accessibilityLabel={`${name}: change result face`}
+            style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+            <Emoji size={28}>{badge}</Emoji>
+          </Pressable>
+          <Pressable
+            onPress={onStickerPress}
+            accessibilityRole="button"
+            accessibilityLabel={sticker ? `${name}: change sticker` : `${name}: give a sticker`}
+            style={({ pressed }) => [styles.button, !sticker && styles.empty, pressed && styles.pressed]}>
+            {sticker ? (
+              <Emoji size={28}>{sticker}</Emoji>
+            ) : (
+              <MaterialIcons name="add-reaction" size={24} color={colors.softLabel} />
+            )}
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.button} />
+      )}
     </Card>
   );
 }
@@ -58,5 +96,15 @@ const styles = StyleSheet.create({
   name: { flex: 1 },
   track: { height: 10, borderRadius: 99, backgroundColor: colors.pressedTint, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 99 },
-  badge: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  result: { gap: 6 },
+  button: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: colors.parentGround,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  empty: { borderWidth: 2, borderStyle: 'dashed', borderColor: colors.dashed },
+  pressed: { backgroundColor: colors.pressedTint },
 });

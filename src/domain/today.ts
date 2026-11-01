@@ -175,8 +175,9 @@ export const finishRoutine = <S extends AppData>(state: S, routineId: string, no
         finishedAt: now,
         secs: run ? Math.round((now - run.openedAt) / 1000) : 0,
         overtimeSecs,
-        // A new finish is a new result: any earlier grown-up pick no longer applies.
+        // A new finish is a new result: earlier grown-up picks no longer apply.
         faceOverride: null,
+        sticker: null,
       },
     },
   };
@@ -191,6 +192,17 @@ export const setResultFace = <S extends AppData>(
   const result = state.results[routineId];
   if (!result || result.faceOverride === face) return state;
   return { ...state, results: { ...state.results, [routineId]: { ...result, faceOverride: face } } };
+};
+
+/** Grown-up reward sticker on today's result (null removes it). No-op without a result. */
+export const setResultSticker = <S extends AppData>(
+  state: S,
+  routineId: string,
+  sticker: string | null,
+): S => {
+  const result = state.results[routineId];
+  if (!result || result.sticker === sticker) return state;
+  return { ...state, results: { ...state.results, [routineId]: { ...result, sticker } } };
 };
 
 export const resetToday = <S extends AppData>(state: S, now: number): S => ({

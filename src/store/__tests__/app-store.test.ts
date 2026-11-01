@@ -184,3 +184,27 @@ it('migrates v11 and persists saved add-ons', () => {
   store.getState().saveAddOnTemplate({ emoji: '💩', label: 'Poop', mins: 5 });
   expect(persisted(storage).state.addOnTemplates).toMatchObject([{ label: 'Poop', mins: 5 }]);
 });
+
+it('migrates v12: a 🦄 face becomes a 🦄 sticker, today and in history', () => {
+  const now = Date.now();
+  const result = (faceOverride: string | null) => ({
+    rating: 'good',
+    doneSteps: 5,
+    totalSteps: 5,
+    finishedAt: now,
+    secs: 60,
+    overtimeSecs: 0,
+    faceOverride,
+  });
+  const bed = { id: 'bed', name: 'Bedtime', emoji: '🌙', color: '#C7B8FF', doneSteps: 5, totalSteps: 5 };
+  const v12 = {
+    ...createInitialData(now),
+    results: { bed: result('unicorn'), morning: result('angry') },
+    history: { '2026-10-12': { dayKey: '2026-10-12', routines: [{ ...bed, result: result('unicorn') }] } },
+  };
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v12, version: 12 }) });
+  const state = createAppStore(storage).getState();
+  expect(state.results.bed).toMatchObject({ faceOverride: null, sticker: '🦄' });
+  expect(state.results.morning).toMatchObject({ faceOverride: 'angry', sticker: null });
+  expect(state.history['2026-10-12'].routines[0].result).toMatchObject({ faceOverride: null, sticker: '🦄' });
+});

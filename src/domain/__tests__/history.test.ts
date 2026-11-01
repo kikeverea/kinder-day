@@ -1,6 +1,6 @@
 import { dayKeyToTime, shiftDay } from '../day';
 import { archiveDay, HISTORY_DAYS, oldestDay, pruneHistory } from '../history';
-import { finishRoutine, openRoutine, rollover, setResultFace, toggleStep } from '../today';
+import { finishRoutine, openRoutine, rollover, setResultFace, setResultSticker, toggleStep } from '../today';
 import { T0, makeState, min } from './fixtures';
 
 const DAY = 24 * 60 * 60_000;
@@ -22,7 +22,7 @@ describe('archiveDay', () => {
     // Monday: morning + school are scheduled.
     let s = toggleStep(openRoutine(makeState(), 'morning', T0), 'morning', 'wake', T0 + min(1));
     s = finishRoutine(s, 'morning', T0 + min(2));
-    s = setResultFace(s, 'morning', 'unicorn');
+    s = setResultSticker(setResultFace(s, 'morning', 'angry'), 'morning', '🦄');
     const record = archiveDay(s)!;
     expect(record.dayKey).toBe('2026-10-12');
     expect(record.routines.map((r) => r.id)).toEqual(['morning', 'school']);
@@ -31,7 +31,7 @@ describe('archiveDay', () => {
       emoji: '🌅',
       doneSteps: 1,
       totalSteps: 3,
-      result: { rating: 'regular', faceOverride: 'unicorn' },
+      result: { rating: 'regular', faceOverride: 'angry', sticker: '🦄' },
     });
     expect(record.routines[1]).toMatchObject({ doneSteps: 0, totalSteps: 1, result: null });
   });

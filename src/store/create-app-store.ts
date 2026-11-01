@@ -6,7 +6,7 @@ import type { NewAddOn, NewStep } from '@/domain/draft';
 import { createSeedRoutines, DEFAULT_SETTINGS } from '@/domain/seed';
 import * as templates from '@/domain/templates';
 import * as today from '@/domain/today';
-import type { AppData, DayOfWeek, ResultFace, Routine, Settings } from '@/domain/types';
+import type { AppData, DayOfWeek, ResultFace, Routine, RoutineResult, Settings } from '@/domain/types';
 import type { KeyValueStorage } from '@/storage/types';
 
 export type AppState = AppData & {
@@ -30,6 +30,7 @@ export type AppState = AppData & {
   resetToday(now?: number): void;
   /** Grown-up override of today's result face; null restores the computed one. */
   setResultFace(routineId: string, face: ResultFace | null): void;
+  setResultSticker(routineId: string, sticker: string | null): void;
 
   saveRoutine(routine: Routine): void;
   deleteRoutine(routineId: string): void;
@@ -48,7 +49,7 @@ export type AppState = AppData & {
 type PersistedState = AppData;
 
 export const STORAGE_KEY = 'kinder-day.state';
-const STORAGE_VERSION = 12;
+const STORAGE_VERSION = 13;
 
 /** Upgrades persisted data from older `STORAGE_VERSION`s. Steps run in order. */
 export const migrate = (persisted: unknown, version: number): PersistedState => {
@@ -122,6 +123,25 @@ export const migrate = (persisted: unknown, version: number): PersistedState => 
     // v12: saved add-ons for reuse.
     state = { ...state, addOnTemplates: state.addOnTemplates ?? [] };
   }
+  if (version < 13) {
+    // v13: 🦄 moves from the face picker to reward stickers; results gain `sticker`.
+    const withSticker = (r: RoutineResult): RoutineResult => {
+      const unicorn = (r.faceOverride as string) === 'unicorn';
+      return {
+        ...r,
+        faceOverride: unicorn ? null : r.faceOverride,
+        sticker: r.sticker ?? (unicorn ? '🦄' : null),
+      };
+    };
+    const results: PersistedState['results'] = {};
+    for (const [id, r] of Object.entries(state.results ?? {})) results[id] = withSticker(r);
+    const history: PersistedState['history'] = {};
+    for (const [key, day] of Object.entries(state.history ?? {})) {
+      const routines = day.routines.map((r) => ({ ...r, result: r.result && withSticker(r.result) }));
+      history[key] = { ...day, routines };
+    }
+    state = { ...state, results, history };
+  }
   return state;
 };
 
@@ -174,6 +194,8 @@ export const createAppStore = (storage: KeyValueStorage) =>
             apply((s) => today.finishRoutine(s, routineId, now)),
           resetToday: (now = Date.now()) => apply((s) => today.resetToday(s, now)),
           setResultFace: (routineId, face) => apply((s) => today.setResultFace(s, routineId, face)),
+          setResultSticker: (routineId, sticker) =>
+            apply((s) => today.setResultSticker(s, routineId, sticker)),
 
           saveRoutine: (routine) => apply((s) => routines.upsertRoutine(s, routine)),
           deleteRoutine: (routineId) => apply((s) => routines.deleteRoutine(s, routineId)),

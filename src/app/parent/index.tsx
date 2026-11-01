@@ -10,6 +10,7 @@ import { FacePickerModal } from '@/components/parent/face-picker-modal';
 import { ParentHeader } from '@/components/parent/parent-header';
 import { RoutineRow } from '@/components/parent/routine-row';
 import { SegmentedControl } from '@/components/parent/segmented-control';
+import { StickerPickerModal } from '@/components/parent/sticker-picker-modal';
 import { TodayRow } from '@/components/parent/today-row';
 import { WeekPlanner } from '@/components/parent/week-planner';
 import { DAY_NAME, FACE_EMOJI } from '@/domain/constants';
@@ -32,11 +33,14 @@ type Tab = (typeof TABS)[number]['key'];
 export default function ParentHome() {
   const [tab, setTab] = useState<Tab>('today');
   const [faceFor, setFaceFor] = useState<Routine | null>(null);
+  const [stickerFor, setStickerFor] = useState<Routine | null>(null);
   const kidName = useAppStore((s) => s.settings.kidName);
   const lockParent = useAppStore((s) => s.lockParent);
   const results = useAppStore((s) => s.results);
   const setResultFace = useAppStore((s) => s.setResultFace);
+  const setResultSticker = useAppStore((s) => s.setResultSticker);
   const faceResult = faceFor ? results[faceFor.id] : undefined;
+  const stickerResult = stickerFor ? results[stickerFor.id] : undefined;
 
   const toKidMode = () => {
     router.dismissTo('/');
@@ -50,7 +54,7 @@ export default function ParentHome() {
         <ParentHeader kidName={kidName} onKidMode={toKidMode} onSettings={() => router.push('/parent/settings')} />
         <SegmentedControl options={TABS} value={tab} onChange={setTab} />
         {tab === 'today' ? (
-          <TodayTab onFacePress={setFaceFor} />
+          <TodayTab onFacePress={setFaceFor} onStickerPress={setStickerFor} />
         ) : tab === 'routines' ? (
           <RoutinesTab />
         ) : (
@@ -65,13 +69,28 @@ export default function ParentHome() {
         }}
         onClose={() => setFaceFor(null)}
       />
+      <StickerPickerModal
+        target={
+          stickerFor && stickerResult
+            ? { name: stickerFor.name, emoji: stickerFor.emoji, result: stickerResult }
+            : null
+        }
+        onPick={(sticker) => {
+          if (stickerFor) setResultSticker(stickerFor.id, sticker);
+          setStickerFor(null);
+        }}
+        onClose={() => setStickerFor(null)}
+      />
     </SafeAreaView>
   );
 }
 
 type FaceProps = { onFacePress: (routine: Routine) => void };
 
-function TodayTab({ onFacePress }: FaceProps) {
+function TodayTab({
+  onFacePress,
+  onStickerPress,
+}: FaceProps & { onStickerPress: (routine: Routine) => void }) {
   const routines = useAppStore((s) => s.routines);
   const dayOrder = useAppStore((s) => s.dayOrder);
   const runs = useAppStore((s) => s.runs);
@@ -117,7 +136,9 @@ function TodayTab({ onFacePress }: FaceProps) {
               total={total}
               status={todayStatus(!!runs[r.id], result)}
               badge={result ? FACE_EMOJI[resultFace(result)] : undefined}
-              onPress={result ? () => onFacePress(r) : undefined}
+              sticker={result?.sticker}
+              onFacePress={() => onFacePress(r)}
+              onStickerPress={() => onStickerPress(r)}
             />
           );
         })

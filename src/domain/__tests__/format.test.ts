@@ -77,7 +77,7 @@ it('stepSubtitle', () => {
 });
 
 describe('result copy', () => {
-  const base = { doneSteps: 7, totalSteps: 7, finishedAt: T0, secs: 600, overtimeSecs: 0, faceOverride: null };
+  const base = { doneSteps: 7, totalSteps: 7, finishedAt: T0, secs: 600, overtimeSecs: 0, faceOverride: null, sticker: null };
 
   it('good', () => {
     const r = { ...base, rating: 'good' as const };
@@ -106,7 +106,7 @@ describe('result copy', () => {
 });
 
 it('resultSummary', () => {
-  const r = { rating: 'good' as const, doneSteps: 5, totalSteps: 7, finishedAt: T0, overtimeSecs: 0, faceOverride: null };
+  const r = { rating: 'good' as const, doneSteps: 5, totalSteps: 7, finishedAt: T0, overtimeSecs: 0, faceOverride: null, sticker: null };
   expect(resultSummary({ ...r, secs: 720 })).toBe('5 of 7 steps · 12 min');
   expect(resultSummary({ ...r, secs: 20 })).toBe('5 of 7 steps · 1 min');
   expect(resultSummary({ ...r, secs: 0 })).toBe('5 of 7 steps');
@@ -130,7 +130,7 @@ it('todayStatus', () => {
       finishedAt,
       secs: 0,
       overtimeSecs: 0,
-      faceOverride: null,
+      faceOverride: null, sticker: null,
     }),
   ).toBe('Finished at 7:42 AM · 6/7 steps');
 });

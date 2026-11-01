@@ -14,6 +14,8 @@ type Props = {
   countLabel: string;
   /** Today's result emoji (😄/👀/😬), if the routine was finished. */
   badge?: string;
+  /** Reward sticker a grown-up gave the result: sits under the result badge. */
+  sticker?: string | null;
   /** A step's timer is ticking: shows a timer badge. */
   running?: boolean;
   width: number;
@@ -21,7 +23,17 @@ type Props = {
   onPress?: () => void;
 };
 
-export function RoutineCard({ name, emoji, color, countLabel, badge, running, width, onPress }: Props) {
+export function RoutineCard({
+  name,
+  emoji,
+  color,
+  countLabel,
+  badge,
+  sticker,
+  running,
+  width,
+  onPress,
+}: Props) {
   return (
     <StickerPressable
       onPress={onPress}
@@ -48,6 +60,11 @@ export function RoutineCard({ name, emoji, color, countLabel, badge, running, wi
       {badge ? (
         <View style={styles.badge}>
           <Emoji size={26}>{badge}</Emoji>
+        </View>
+      ) : null}
+      {sticker ? (
+        <View style={[styles.badge, styles.sticker]}>
+          <Emoji size={26}>{sticker}</Emoji>
         </View>
       ) : null}
     </StickerPressable>
@@ -89,4 +106,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   timer: { right: undefined, left: -8 },
+  sticker: { top: 40 },
 });

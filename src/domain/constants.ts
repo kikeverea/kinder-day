@@ -63,8 +63,37 @@ export const FACE_EMOJI = {
   bad: '😬',
   regular: '😶',
   good: '😄',
-  unicorn: '🦄',
 } as const;
 
 /** Order of the grown-ups' face picker. */
-export const FACE_CHOICES = ['angry', 'bad', 'regular', 'good', 'unicorn'] as const;
+export const FACE_CHOICES = ['angry', 'bad', 'regular', 'good'] as const;
+
+/** Reward stickers grown-ups can give a result, grouped for the picker. No faces from `FACE_EMOJI`. */
+export const STICKER_GROUPS = [
+  { title: 'Magic', stickers: ['🦄', '🐉', '🚀'] },
+  { title: 'Wild', stickers: ['🦁', '🐯', '🐼', '🦊'] },
+  { title: 'Birds', stickers: ['🦅', '🦉', '🦚', '🦢', '🦆', '🪿'] },
+  { title: 'Sea', stickers: ['🐋', '🐳', '🐬', '🦭', '🦦', '🦈', '🐙', '🪼'] },
+  {
+    title: 'Party',
+    stickers: [
+      '🎉', '🎊', '🥳', '🎈', '🎁', '🎀', '🪅', '🎆', '🎇', '🪩', '🏆',
+      '🥇', '🏅', '🎖️', '👑', '⭐', '🌟', '✨', '💫', '🌈', '🙌', '👏',
+    ],
+  },
+  {
+    title: 'Hearts',
+    stickers: [
+      '❤️', '🩷', '🧡', '💛', '💚', '🩵', '💙', '💜', '🖤',
+      '🤍', '💖', '💗', '💓', '💞', '💕', '💘', '💝', '💟', '❣️', '❤️‍🔥',
+    ],
+  },
+  {
+    title: 'Happy faces',
+    stickers: [
+      '😀', '😃', '😁', '😆', '😊', '🙂', '🙃', '😉', '😇', '🥰',
+      '😍', '🤩', '😘', '😚', '😋', '😛', '😜', '🤪', '😝', '🤗',
+      '😎', '🤠', '🥹', '😅', '😂', '🤣', '😺', '😸', '😹', '😻',
+    ],
+  },
+] as const;

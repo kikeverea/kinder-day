@@ -50,6 +50,7 @@ export default function KidHome() {
         color: r.color,
         countLabel: `${r.doneSteps} of ${r.totalSteps}`,
         badge: r.result ? FACE_EMOJI[resultFace(r.result)] : undefined,
+        sticker: r.result?.sticker,
         running: false,
       }))
     : routinesForDay(routines, dayOrder, dayOfWeek(now)).map((r) => {
@@ -62,6 +63,7 @@ export default function KidHome() {
           color: r.color,
           countLabel: `${done} of ${total}`,
           badge: result ? FACE_EMOJI[resultFace(result)] : undefined,
+          sticker: result?.sticker,
           running: isRoutineRunning(runs[r.id]),
         };
       });
@@ -133,6 +135,7 @@ export default function KidHome() {
                 color={t.color}
                 countLabel={t.countLabel}
                 badge={t.badge}
+                sticker={t.sticker}
                 running={t.running}
                 width={cardWidth}
                 onPress={

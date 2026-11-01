@@ -43,8 +43,8 @@ export type Routine = {
 
 export type Rating = 'good' | 'regular' | 'bad';
 
-/** Faces a result can show: the three ratings plus parent-only extremes. */
-export type ResultFace = 'angry' | Rating | 'unicorn';
+/** Faces a result can show: the three ratings plus a parent-only 😡. */
+export type ResultFace = 'angry' | Rating;
 
 export type RoutineResult = {
   rating: Rating;
@@ -58,6 +58,8 @@ export type RoutineResult = {
   overtimeSecs: number;
   /** Face picked by a grown-up; null shows the face for `rating`. */
   faceOverride: ResultFace | null;
+  /** Reward sticker (an emoji from `STICKER_GROUPS`) given by a grown-up; null for none. */
+  sticker: string | null;
 };
 
 /**
