@@ -41,5 +41,6 @@ export const makeState = (overrides: Partial<AppData> = {}): AppData => ({
   dayOrder: {},
   settings: DEFAULT_SETTINGS,
   history: {},
+  stepTemplates: [],
   ...overrides,
 });

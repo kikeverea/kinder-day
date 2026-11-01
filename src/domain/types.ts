@@ -118,4 +118,6 @@ export type AppData = TodayData & {
   settings: Settings;
   /** dayKey → archived past day (newest `HISTORY_DAYS` kept). */
   history: Record<string, DayRecord>;
+  /** Saved steps the editor can reuse. Ids are the template's own; a reused step gets a new id. */
+  stepTemplates: Step[];
 };

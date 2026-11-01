@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
@@ -5,18 +6,32 @@ import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
 import { BUFFER_HINT, MAX_BUFFER_MINS, MIN_BUFFER_MINS, STEP_MODES } from '@/domain/constants';
 import { clampBufferMins, clampMins, EMPTY_NEW_STEP, toggleMode, type NewStep } from '@/domain/draft';
+import { isSavedTemplate } from '@/domain/templates';
+import type { Step } from '@/domain/types';
 import { colors, fonts } from '@/theme/tokens';
 
 import { IconGrid } from './icon-grid';
 import { MinutesStepper } from './minutes-stepper';
 import { ModeChip } from './mode-chip';
+import { SavedSteps } from './saved-steps';
 
-/** "Add a step…" box: icon picker, label, mode and minutes (plus buffers for exact steps). Resets after adding. */
-export function AddStepBox({ onAdd }: { onAdd: (step: NewStep) => void }) {
+type Props = {
+  onAdd: (step: NewStep) => void;
+  templates: Step[];
+  onSaveTemplate: (step: NewStep) => void;
+  onDeleteTemplate: (templateId: string) => void;
+};
+
+/**
+ * "Add a step…" box: saved steps to reuse, then icon picker, label, save for reuse, mode and minutes
+ * (plus buffers for exact steps). Resets after adding.
+ */
+export function AddStepBox({ onAdd, templates, onSaveTemplate, onDeleteTemplate }: Props) {
   const [step, setStep] = useState<NewStep>(EMPTY_NEW_STEP);
   const [picking, setPicking] = useState(false);
   const canAdd = step.label.trim().length > 0;
   const exact = step.mode === 'exact';
+  const saved = canAdd && isSavedTemplate(templates, step);
 
   const add = () => {
     if (!canAdd) return;
@@ -27,6 +42,7 @@ export function AddStepBox({ onAdd }: { onAdd: (step: NewStep) => void }) {
 
   return (
     <View style={styles.box}>
+      <SavedSteps templates={templates} onPick={onAdd} onDelete={onDeleteTemplate} />
       <View style={styles.row}>
         <Pressable
           onPress={() => setPicking((p) => !p)}
@@ -44,6 +60,14 @@ export function AddStepBox({ onAdd }: { onAdd: (step: NewStep) => void }) {
           placeholderTextColor={colors.softLabel}
           style={styles.input}
         />
+        <Pressable
+          onPress={() => onSaveTemplate(step)}
+          disabled={!canAdd || saved}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Step is saved' : 'Save step for reuse'}
+          style={[styles.save, !canAdd && styles.disabled]}>
+          <MaterialIcons name={saved ? 'bookmark' : 'bookmark-border'} size={24} color={colors.accentMuted} />
+        </Pressable>
         <Pressable
           onPress={add}
           disabled={!canAdd}
@@ -146,6 +170,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 14,
     backgroundColor: colors.ink,
+    justifyContent: 'center',
+  },
+  save: {
+    width: 44,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: colors.parentGround,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   disabled: { opacity: 0.4 },

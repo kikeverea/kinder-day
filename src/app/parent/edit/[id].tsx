@@ -31,6 +31,7 @@ import {
   type RoutineDraft,
 } from '@/domain/draft';
 import { stepsTotalLabel } from '@/domain/format';
+import { isSavedTemplate } from '@/domain/templates';
 import { useAppStore } from '@/store';
 import { colors, fonts, parentCard, spacing } from '@/theme/tokens';
 
@@ -38,6 +39,9 @@ export default function RoutineEditor() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const saveRoutine = useAppStore((s) => s.saveRoutine);
   const deleteRoutine = useAppStore((s) => s.deleteRoutine);
+  const stepTemplates = useAppStore((s) => s.stepTemplates);
+  const saveStepTemplate = useAppStore((s) => s.saveStepTemplate);
+  const deleteStepTemplate = useAppStore((s) => s.deleteStepTemplate);
   const [draft, setDraft] = useState<RoutineDraft>(() => {
     const { routines } = useAppStore.getState();
     const existing = routines.find((r) => r.id === id);
@@ -174,6 +178,8 @@ export default function RoutineEditor() {
             <NestedReorderableList
               scrollEnabled={false}
               data={draft.steps}
+              // Rows read saved steps for their bookmark; re-render them when those change.
+              extraData={stepTemplates}
               keyExtractor={(s) => s.id}
               onReorder={onReorder}
               renderItem={({ item, index }) => (
@@ -184,10 +190,17 @@ export default function RoutineEditor() {
                   onMins={(mins) => setDraft((d) => updateStep(d, item.id, { mins }))}
                   onBuffer={(patch) => setDraft((d) => updateStep(d, item.id, patch))}
                   onRemove={() => setDraft((d) => removeStep(d, item.id))}
+                  saved={isSavedTemplate(stepTemplates, item)}
+                  onSaveTemplate={() => saveStepTemplate(item)}
                 />
               )}
             />
-            <AddStepBox onAdd={(step) => setDraft((d) => addStep(d, step))} />
+            <AddStepBox
+              onAdd={(step) => setDraft((d) => addStep(d, step))}
+              templates={stepTemplates}
+              onSaveTemplate={saveStepTemplate}
+              onDeleteTemplate={deleteStepTemplate}
+            />
           </View>
         </ScrollViewContainer>
 

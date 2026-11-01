@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import * as routines from '@/domain/routines';
+import type { NewStep } from '@/domain/draft';
 import { createSeedRoutines, DEFAULT_SETTINGS } from '@/domain/seed';
+import * as templates from '@/domain/templates';
 import * as today from '@/domain/today';
 import type { AppData, DayOfWeek, ResultFace, Routine, Settings } from '@/domain/types';
 import type { KeyValueStorage } from '@/storage/types';
@@ -31,6 +33,9 @@ export type AppState = AppData & {
   addRoutineToDay(routineId: string, day: DayOfWeek): void;
   removeRoutineFromDay(routineId: string, day: DayOfWeek): void;
   reorderDay(day: DayOfWeek, routineIds: string[]): void;
+  /** Saved steps the editor can reuse (saved immediately, independent of the routine's Save). */
+  saveStepTemplate(step: NewStep): void;
+  deleteStepTemplate(templateId: string): void;
 
   updateSettings(patch: Partial<Settings>): void;
 };
@@ -38,7 +43,7 @@ export type AppState = AppData & {
 type PersistedState = AppData;
 
 export const STORAGE_KEY = 'kinder-day.state';
-const STORAGE_VERSION = 9;
+const STORAGE_VERSION = 10;
 
 /** Upgrades persisted data from older `STORAGE_VERSION`s. Steps run in order. */
 export const migrate = (persisted: unknown, version: number): PersistedState => {
@@ -97,6 +102,10 @@ export const migrate = (persisted: unknown, version: number): PersistedState => 
     }));
     state = { ...state, routines };
   }
+  if (version < 10) {
+    // v10: saved steps for reuse.
+    state = { ...state, stepTemplates: state.stepTemplates ?? [] };
+  }
   return state;
 };
 
@@ -106,6 +115,7 @@ export const createInitialData = (now = Date.now()): AppData => ({
   dayOrder: {},
   settings: DEFAULT_SETTINGS,
   history: {},
+  stepTemplates: [],
 });
 
 export const createAppStore = (storage: KeyValueStorage) =>
@@ -152,6 +162,8 @@ export const createAppStore = (storage: KeyValueStorage) =>
           removeRoutineFromDay: (routineId, day) =>
             apply((s) => routines.removeRoutineFromDay(s, routineId, day)),
           reorderDay: (day, routineIds) => apply((s) => routines.reorderDay(s, day, routineIds)),
+          saveStepTemplate: (step) => apply((s) => templates.saveStepTemplate(s, step)),
+          deleteStepTemplate: (templateId) => apply((s) => templates.deleteStepTemplate(s, templateId)),
 
           updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
         };
@@ -161,7 +173,7 @@ export const createAppStore = (storage: KeyValueStorage) =>
         version: STORAGE_VERSION,
         migrate,
         storage: createJSONStorage<PersistedState>(() => storage),
-        partialize: ({ dayKey, runs, results, routines, dayOrder, settings, history }) => ({
+        partialize: ({
           dayKey,
           runs,
           results,
@@ -169,6 +181,16 @@ export const createAppStore = (storage: KeyValueStorage) =>
           dayOrder,
           settings,
           history,
+          stepTemplates,
+        }) => ({
+          dayKey,
+          runs,
+          results,
+          routines,
+          dayOrder,
+          settings,
+          history,
+          stepTemplates,
         }),
         merge: (persisted, current) => {
           const saved = persisted as Partial<PersistedState> | undefined;

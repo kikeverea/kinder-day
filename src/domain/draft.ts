@@ -57,7 +57,7 @@ export const clampMins = (mins: number) => Math.min(MAX_STEP_MINS, Math.max(MIN_
 export const clampBufferMins = (mins: number) =>
   Math.min(MAX_BUFFER_MINS, Math.max(MIN_BUFFER_MINS, mins));
 
-const clampStep = <T extends NewStep>(step: T): T => ({
+export const clampStep = <T extends NewStep>(step: T): T => ({
   ...step,
   mins: clampMins(step.mins),
   beforeMins: clampBufferMins(step.beforeMins),

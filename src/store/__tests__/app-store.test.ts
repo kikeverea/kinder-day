@@ -149,3 +149,16 @@ it('migrates v8 steps: buffers default to 0', () => {
   const steps = createAppStore(storage).getState().routines.flatMap((r) => r.steps);
   expect(steps.every((s) => s.beforeMins === 0 && s.afterMins === 0)).toBe(true);
 });
+
+it('migrates v9: adds empty saved steps', () => {
+  const { stepTemplates: _t, ...v9 } = createInitialData(Date.now());
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v9, version: 9 }) });
+  expect(createAppStore(storage).getState().stepTemplates).toEqual([]);
+});
+
+it('persists saved steps', () => {
+  const storage = createMemoryStorage();
+  const store = createAppStore(storage);
+  store.getState().saveStepTemplate({ emoji: '📚', label: 'Read', mins: 10, mode: 'exact', beforeMins: 1, afterMins: 0 });
+  expect(persisted(storage).state.stepTemplates).toMatchObject([{ label: 'Read', mins: 10 }]);
+});

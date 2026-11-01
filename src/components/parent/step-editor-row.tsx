@@ -18,13 +18,26 @@ type Props = {
   onMins: (mins: number) => void;
   onBuffer: (patch: Partial<Pick<Step, 'beforeMins' | 'afterMins'>>) => void;
   onRemove: () => void;
+  /** The step is saved for reuse exactly as it is (filled bookmark). */
+  saved: boolean;
+  onSaveTemplate: () => void;
 };
 
 /**
- * Editor step: drag handle, number, icon, label, mode chip, minutes and remove. Exact steps show the
- * chip, then aligned Before / Task / After minutes. Must render inside a reorderable list.
+ * Editor step: drag handle, number, icon, label, mode chip, minutes, save for reuse and remove.
+ * Exact steps show the chip, then aligned Before / Task / After minutes. Must render inside a
+ * reorderable list.
  */
-export function StepEditorRow({ step, index, onToggleMode, onMins, onBuffer, onRemove }: Props) {
+export function StepEditorRow({
+  step,
+  index,
+  onToggleMode,
+  onMins,
+  onBuffer,
+  onRemove,
+  saved,
+  onSaveTemplate,
+}: Props) {
   const exact = step.mode === 'exact';
   const drag = useReorderableDrag();
 
@@ -71,11 +84,21 @@ export function StepEditorRow({ step, index, onToggleMode, onMins, onBuffer, onR
           </View>
         )}
       </View>
-      <Pressable onPress={onRemove} accessibilityLabel={`Remove ${step.label}`} style={styles.remove}>
-        <AppText size={18} color={colors.dangerText}>
-          ✕
-        </AppText>
-      </Pressable>
+      <View style={styles.actions}>
+        <Pressable
+          onPress={onSaveTemplate}
+          disabled={saved}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? `${step.label} is saved` : `Save ${step.label} for reuse`}
+          style={styles.save}>
+          <MaterialIcons name={saved ? 'bookmark' : 'bookmark-border'} size={22} color={colors.accentMuted} />
+        </Pressable>
+        <Pressable onPress={onRemove} accessibilityLabel={`Remove ${step.label}`} style={styles.remove}>
+          <AppText size={18} color={colors.dangerText}>
+            ✕
+          </AppText>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -108,6 +131,15 @@ const styles = StyleSheet.create({
   label: { lineHeight: 21 },
   chip: { alignSelf: 'flex-start' },
   controls: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  actions: { gap: 8 },
+  save: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.parentGround,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   remove: {
     width: 40,
     height: 40,
