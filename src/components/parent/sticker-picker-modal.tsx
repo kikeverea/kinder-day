@@ -25,7 +25,8 @@ export function StickerPickerModal({ target, onPick, onClose }: Props) {
       emoji={target?.emoji ?? ''}
       name={target?.name ?? ''}
       prompt="Give a sticker"
-      onClose={onClose}>
+      onClose={onClose}
+      closeButton>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.groups}>
         {STICKER_GROUPS.map((group) => (
           <View key={group.title} style={styles.group}>

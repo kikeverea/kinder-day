@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
@@ -11,11 +12,13 @@ type Props = {
   name: string;
   prompt: string;
   onClose: () => void;
+  /** Adds a ✕ button in the top-right corner, for sheets too big for tap-outside to be obvious. */
+  closeButton?: boolean;
   children: ReactNode;
 };
 
 /** Centered sheet over a dimmed backdrop (tap outside to close), shared by the result pickers. */
-export function PickerModal({ visible, emoji, name, prompt, onClose, children }: Props) {
+export function PickerModal({ visible, emoji, name, prompt, onClose, closeButton, children }: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.backdrop}>
@@ -23,13 +26,23 @@ export function PickerModal({ visible, emoji, name, prompt, onClose, children }:
             touch responder and stop the sticker list from scrolling when a drag starts off an icon. */}
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
         <View style={styles.sheet}>
-          <AppText size={22} weight="semibold" align="center">
+          <AppText size={22} weight="semibold" align="center" style={closeButton && styles.clearClose}>
             {emoji} {name}
           </AppText>
           <AppText size={15} color={colors.muted} align="center">
             {prompt}
           </AppText>
           {children}
+          {closeButton ? (
+            <Pressable
+              onPress={onClose}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              style={({ pressed }) => [styles.close, pressed && styles.closePressed]}>
+              <MaterialIcons name="close" size={24} color={colors.accentMuted} />
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -65,5 +78,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 10,
   },
+  // Keeps a long title clear of the ✕.
+  clearClose: { paddingHorizontal: 40 },
+  close: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.parentGround,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closePressed: { backgroundColor: colors.pressedTint },
   link: { textDecorationLine: 'underline', marginTop: 4 },
 });
