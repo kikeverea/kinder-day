@@ -42,12 +42,37 @@ const deleteIn = <T extends Saved>(templates: T[], templateId: string) =>
   templates.some((t) => t.id === templateId) ? templates.filter((t) => t.id !== templateId) : templates;
 
 /**
+ * The step as it would be saved from a routine of this kind. Without timer, what that editor doesn't
+ * show (a non-exact step's minutes, exact steps' buffers) comes from the saved step with the same
+ * label, so saving there never changes it; a new non-exact step is saved with no time (0).
+ */
+export const stepAsSaved = <T extends NewStep>(templates: Step[], step: T, timed: boolean): T => {
+  if (timed) return step;
+  const t = templateFor(templates, step);
+  return {
+    ...step,
+    mins: step.mode === 'exact' ? step.mins : t?.mode === 'max' ? t.mins : 0,
+    beforeMins: t?.beforeMins ?? step.beforeMins,
+    afterMins: t?.afterMins ?? step.afterMins,
+  };
+};
+
+/** The step is saved as it looks in a routine of this kind (filled bookmark). */
+export const isStepSaved = (templates: Step[], step: NewStep, timed: boolean) =>
+  isSavedTemplate(templates, stepAsSaved(templates, step, timed));
+
+/**
  * Saves a step for reuse. A template with the same label is updated in place, so saving an
  * edited step refreshes it. Steps without a label are ignored; nothing changes when already saved.
+ * From a routine without timer, see `stepAsSaved`.
  */
-export const saveStepTemplate = <S extends AppData>(state: S, step: NewStep): S => {
-  const { emoji, label, mins, mode, beforeMins, afterMins } = step;
-  const fields: Omit<Step, 'id'> = clampStep({ emoji, label: label.trim(), mins, mode, beforeMins, afterMins });
+export const saveStepTemplate = <S extends AppData>(state: S, step: NewStep, timed = true): S => {
+  const { emoji, label, mins, mode, beforeMins, afterMins } = stepAsSaved(state.stepTemplates, step, timed);
+  const fields: Omit<Step, 'id'> = {
+    ...clampStep({ emoji, label: label.trim(), mins, mode, beforeMins, afterMins }),
+    // No time stays no time; `clampStep` would turn it into 1 min.
+    ...(mode === 'max' && mins === 0 ? { mins: 0 } : {}),
+  };
   const stepTemplates = saveIn(state.stepTemplates, fields);
   return stepTemplates === state.stepTemplates ? state : { ...state, stepTemplates };
 };

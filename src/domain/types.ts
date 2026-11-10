@@ -8,7 +8,10 @@ export type Step = {
   id: string;
   emoji: string;
   label: string;
-  /** 1–60 */
+  /**
+   * 1–60, or 0 for a non-exact step with no time: every one in a routine without timer, and
+   * saved steps made there. In a timed routine 0 means the step still needs a time.
+   */
   mins: number;
   mode: StepMode;
   /**
@@ -37,6 +40,12 @@ export type Routine = {
   emoji: string;
   color: string;
   days: DayOfWeek[];
+  /**
+   * false = no timer, for relaxed routines: non-exact steps have no time and are just ticked off,
+   * nothing counts down but exact steps, there's no "All steps" total, add-ons are off and the
+   * result is rated by steps done only.
+   */
+  timed: boolean;
   steps: Step[];
   addOns: AddOn[];
 };

@@ -21,6 +21,7 @@ export const createSeedRoutines = (): Routine[] => [
     emoji: '🌅',
     color: '#FFD66B',
     days: [...ALL_DAYS],
+    timed: true,
     steps: [
       step('⏰', 'Wake up', 2),
       step('🚽', 'Go pee', 3),
@@ -38,11 +39,13 @@ export const createSeedRoutines = (): Routine[] => [
     emoji: '🏫',
     color: '#8FE3B8',
     days: [...WEEKDAYS],
+    // Relaxed: no timer, just tick things off.
+    timed: false,
     steps: [
-      step('🧼', 'Wash my hands', 2),
-      step('🍎', 'Have a snack', 10),
-      step('🎒', 'Empty my backpack', 3),
-      step('📚', 'Homework time', 20),
+      step('🧼', 'Wash my hands', 0),
+      step('🍎', 'Have a snack', 0),
+      step('🎒', 'Empty my backpack', 0),
+      step('📚', 'Do my homework', 0),
     ],
     addOns: [],
   },
@@ -52,6 +55,7 @@ export const createSeedRoutines = (): Routine[] => [
     emoji: '🌙',
     color: '#C7A8FF',
     days: [...ALL_DAYS],
+    timed: true,
     steps: [
       step('🛁', 'Bath time', 15),
       step('👚', 'Pajamas on', 3),

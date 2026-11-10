@@ -33,6 +33,7 @@ export const chimeEvents = (
       const sr = run.steps[step.id];
       if (!sr) continue;
       const total = stepTotalMs(step);
+      if (total === 0) continue; // a step with no time has nothing to count down
       const before = total - usedAt(sr, from);
       const after = total - usedAt(sr, to);
       if (before > 0 && after <= 0) {

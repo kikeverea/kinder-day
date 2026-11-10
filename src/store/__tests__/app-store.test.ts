@@ -208,3 +208,10 @@ it('migrates v12: a 🦄 face becomes a 🦄 sticker, today and in history', () 
   expect(state.results.morning).toMatchObject({ faceOverride: 'angry', sticker: null });
   expect(state.history['2026-10-12'].routines[0].result).toMatchObject({ faceOverride: null, sticker: '🦄' });
 });
+
+it('migrates v13: existing routines are timed', () => {
+  const data = createInitialData(Date.now());
+  const v13 = { ...data, routines: data.routines.map(({ timed: _t, ...r }) => r) };
+  const storage = createMemoryStorage({ [STORAGE_KEY]: JSON.stringify({ state: v13, version: 13 }) });
+  expect(createAppStore(storage).getState().routines.every((r) => r.timed)).toBe(true);
+});

@@ -5,6 +5,7 @@ import { useReorderableDrag } from 'react-native-reorderable-list';
 import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
 import { MAX_BUFFER_MINS, MIN_BUFFER_MINS } from '@/domain/constants';
+import { needsTime } from '@/domain/draft';
 import type { Step } from '@/domain/types';
 import { colors } from '@/theme/tokens';
 
@@ -18,6 +19,10 @@ type Props = {
   onMins: (mins: number) => void;
   onBuffer: (patch: Partial<Pick<Step, 'beforeMins' | 'afterMins'>>) => void;
   onRemove: () => void;
+  /** false: the routine has no timer (non-exact steps have no time, exact steps no buffers). */
+  timed: boolean;
+  /** Opens the time prompt for a non-exact step with no time in a timed routine. */
+  onSetTime: () => void;
   /** The step is saved for reuse exactly as it is (filled bookmark). */
   saved: boolean;
   onSaveTemplate: () => void;
@@ -25,8 +30,9 @@ type Props = {
 
 /**
  * Editor step: drag handle, number, icon, label, mode chip, minutes, save for reuse and remove.
- * Exact steps show the chip, then aligned Before / Task / After minutes. Must render inside a
- * reorderable list.
+ * Exact steps in a timed routine show the chip, then aligned Before / Task / After minutes.
+ * Without timer, non-exact steps show just the chip. A step that still needs a time shows
+ * "Set time". Must render inside a reorderable list.
  */
 export function StepEditorRow({
   step,
@@ -35,6 +41,8 @@ export function StepEditorRow({
   onMins,
   onBuffer,
   onRemove,
+  timed,
+  onSetTime,
   saved,
   onSaveTemplate,
 }: Props) {
@@ -56,7 +64,7 @@ export function StepEditorRow({
         <AppText size={18} style={styles.label}>
           {step.label}
         </AppText>
-        {exact ? (
+        {exact && timed ? (
           <>
             <View style={styles.chip}>
               <ModeChip mode={step.mode} onPress={onToggleMode} />
@@ -79,8 +87,20 @@ export function StepEditorRow({
           </>
         ) : (
           <View style={styles.controls}>
-            <ModeChip mode={step.mode} onPress={onToggleMode} />
-            <MinutesStepper mins={step.mins} onChange={onMins} />
+            <ModeChip mode={step.mode} onPress={onToggleMode} timed={timed} />
+            {needsTime(step, timed) ? (
+              <Pressable
+                onPress={onSetTime}
+                accessibilityRole="button"
+                accessibilityLabel={`Set a time for ${step.label}`}
+                style={styles.setTime}>
+                <AppText size={13} weight="semibold" color={colors.dangerText}>
+                  ⏱️ Set time
+                </AppText>
+              </Pressable>
+            ) : exact || timed ? (
+              <MinutesStepper mins={step.mins} onChange={onMins} />
+            ) : null}
           </View>
         )}
       </View>
@@ -131,6 +151,15 @@ const styles = StyleSheet.create({
   label: { lineHeight: 21 },
   chip: { alignSelf: 'flex-start' },
   controls: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  setTime: {
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 99,
+    borderWidth: 2,
+    borderColor: colors.dangerBorder,
+    backgroundColor: colors.dangerBg,
+    justifyContent: 'center',
+  },
   actions: { gap: 8 },
   save: {
     width: 40,

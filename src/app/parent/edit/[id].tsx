@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { usePreventRemove } from 'expo-router/react-navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import {
   NestedReorderableList,
@@ -17,27 +17,32 @@ import { AddStepBox } from '@/components/parent/add-step-box';
 import { ColorPicker } from '@/components/parent/color-picker';
 import { DayPicker } from '@/components/parent/day-picker';
 import { IconGrid } from '@/components/parent/icon-grid';
+import { SegmentedControl } from '@/components/parent/segmented-control';
 import { StepEditorRow } from '@/components/parent/step-editor-row';
+import { StepTimeModal } from '@/components/parent/step-time-modal';
 import {
   addAddOn,
   addStep,
   canSave,
   draftFromRoutine,
   moveStep,
+  needsTime,
   newDraft,
   removeAddOn,
   removeStep,
+  setTimed,
   toggleDay,
   toggleEveryDay,
-  toggleMode,
+  toggleStepMode,
   toRoutine,
   updateAddOnMins,
   updateStep,
+  type NewStep,
   type RoutineDraft,
 } from '@/domain/draft';
-import { ADD_ON_HINT } from '@/domain/constants';
-import { stepsTotalLabel } from '@/domain/format';
-import { isSavedTemplate } from '@/domain/templates';
+import { ADD_ON_HINT, ROUTINE_TYPE_HINT, ROUTINE_TYPES } from '@/domain/constants';
+import { plural, stepsTotalLabel } from '@/domain/format';
+import { isSavedTemplate, isStepSaved } from '@/domain/templates';
 import { useAppStore } from '@/store';
 import { colors, fonts, parentCard, spacing } from '@/theme/tokens';
 
@@ -58,6 +63,24 @@ export default function RoutineEditor() {
   });
   const patch = (p: Partial<RoutineDraft>) => setDraft((d) => ({ ...d, ...p }));
   const savable = canSave(draft);
+  const untimedSteps = draft.steps.filter((s) => needsTime(s, draft.timed)).length;
+  // A step with no time on its way into a timed routine: a saved step being added (no id) or a
+  // step already in it (after switching to timed). The time prompt is open while set.
+  const [timeFor, setTimeFor] = useState<{ step: NewStep; stepId?: string } | null>(null);
+  // Rows read saved steps and the routine type; re-render them when either changes.
+  const rowDeps = useMemo(() => ({ stepTemplates, timed: draft.timed }), [stepTemplates, draft.timed]);
+
+  const addOrAskTime = (step: NewStep) => {
+    if (needsTime(step, draft.timed)) setTimeFor({ step });
+    else setDraft((d) => addStep(d, step));
+  };
+
+  const confirmTime = (mins: number) => {
+    if (!timeFor) return;
+    const { step, stepId } = timeFor;
+    setDraft((d) => (stepId ? updateStep(d, stepId, { mins }) : addStep(d, { ...step, mins })));
+    setTimeFor(null);
+  };
 
   // Ask before discarding edits (back button, Android back, swipe). Save/Delete leave freely.
   const [initial] = useState(() => JSON.stringify(draft));
@@ -169,6 +192,20 @@ export default function RoutineEditor() {
           </View>
 
           <View style={styles.section}>
+            <AppText size={17} weight="semibold">
+              Timer
+            </AppText>
+            <SegmentedControl
+              options={ROUTINE_TYPES}
+              value={draft.timed ? 'timed' : 'untimed'}
+              onChange={(type) => setDraft((d) => setTimed(d, type === 'timed'))}
+            />
+            <AppText size={13} color={colors.muted}>
+              {ROUTINE_TYPE_HINT[draft.timed ? 'timed' : 'untimed']}
+            </AppText>
+          </View>
+
+          <View style={styles.section}>
             <View style={styles.stepsHeader}>
               <AppText size={17} weight="semibold">
                 Steps
@@ -187,58 +224,68 @@ export default function RoutineEditor() {
             <NestedReorderableList
               scrollEnabled={false}
               data={draft.steps}
-              // Rows read saved steps for their bookmark; re-render them when those change.
-              extraData={stepTemplates}
+              extraData={rowDeps}
               keyExtractor={(s) => s.id}
               onReorder={onReorder}
               renderItem={({ item, index }) => (
                 <StepEditorRow
                   step={item}
                   index={index}
-                  onToggleMode={() => setDraft((d) => updateStep(d, item.id, { mode: toggleMode(item.mode) }))}
+                  onToggleMode={() => setDraft((d) => toggleStepMode(d, item.id))}
                   onMins={(mins) => setDraft((d) => updateStep(d, item.id, { mins }))}
                   onBuffer={(patch) => setDraft((d) => updateStep(d, item.id, patch))}
                   onRemove={() => setDraft((d) => removeStep(d, item.id))}
-                  saved={isSavedTemplate(stepTemplates, item)}
-                  onSaveTemplate={() => saveStepTemplate(item)}
+                  timed={draft.timed}
+                  onSetTime={() => setTimeFor({ step: item, stepId: item.id })}
+                  saved={isStepSaved(stepTemplates, item, draft.timed)}
+                  onSaveTemplate={() => saveStepTemplate(item, draft.timed)}
                 />
               )}
             />
             <AddStepBox
-              onAdd={(step) => setDraft((d) => addStep(d, step))}
+              onAdd={addOrAskTime}
               templates={stepTemplates}
-              onSaveTemplate={saveStepTemplate}
+              onSaveTemplate={(step) => saveStepTemplate(step, draft.timed)}
               onDeleteTemplate={deleteStepTemplate}
+              timed={draft.timed}
             />
           </View>
 
-          <View style={styles.section}>
-            <AppText size={17} weight="semibold">
-              Add-ons
-            </AppText>
-            <AppText size={13} color={colors.muted}>
-              {ADD_ON_HINT}
-            </AppText>
-            {draft.addOns.map((addOn) => (
-              <AddOnEditorRow
-                key={addOn.id}
-                addOn={addOn}
-                onMins={(mins) => setDraft((d) => updateAddOnMins(d, addOn.id, mins))}
-                onRemove={() => setDraft((d) => removeAddOn(d, addOn.id))}
-                saved={isSavedTemplate(addOnTemplates, addOn)}
-                onSaveTemplate={() => saveAddOnTemplate(addOn)}
+          {/* Add-ons add time to the routine's total, so routines without timer have none. */}
+          {draft.timed ? (
+            <View style={styles.section}>
+              <AppText size={17} weight="semibold">
+                Add-ons
+              </AppText>
+              <AppText size={13} color={colors.muted}>
+                {ADD_ON_HINT}
+              </AppText>
+              {draft.addOns.map((addOn) => (
+                <AddOnEditorRow
+                  key={addOn.id}
+                  addOn={addOn}
+                  onMins={(mins) => setDraft((d) => updateAddOnMins(d, addOn.id, mins))}
+                  onRemove={() => setDraft((d) => removeAddOn(d, addOn.id))}
+                  saved={isSavedTemplate(addOnTemplates, addOn)}
+                  onSaveTemplate={() => saveAddOnTemplate(addOn)}
+                />
+              ))}
+              <AddAddOnBox
+                onAdd={(addOn) => setDraft((d) => addAddOn(d, addOn))}
+                templates={addOnTemplates}
+                onSaveTemplate={saveAddOnTemplate}
+                onDeleteTemplate={deleteAddOnTemplate}
               />
-            ))}
-            <AddAddOnBox
-              onAdd={(addOn) => setDraft((d) => addAddOn(d, addOn))}
-              templates={addOnTemplates}
-              onSaveTemplate={saveAddOnTemplate}
-              onDeleteTemplate={deleteAddOnTemplate}
-            />
-          </View>
+            </View>
+          ) : null}
         </ScrollViewContainer>
 
         <View style={styles.footer}>
+          {untimedSteps > 0 ? (
+            <AppText size={14} color={colors.dangerText} align="center">
+              {plural(untimedSteps, 'step')} still {untimedSteps === 1 ? 'needs' : 'need'} a time
+            </AppText>
+          ) : null}
           <Pressable
             onPress={save}
             disabled={!savable}
@@ -250,6 +297,12 @@ export default function RoutineEditor() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+      <StepTimeModal
+        step={timeFor?.step ?? null}
+        confirmLabel={timeFor?.stepId ? 'Set' : 'Add'}
+        onConfirm={confirmTime}
+        onClose={() => setTimeFor(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -316,7 +369,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   stepsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  footer: { paddingHorizontal: spacing.screenX, paddingTop: 12, paddingBottom: 18 },
+  footer: { gap: 8, paddingHorizontal: spacing.screenX, paddingTop: 12, paddingBottom: 18 },
   save: {
     height: 60,
     borderRadius: 20,

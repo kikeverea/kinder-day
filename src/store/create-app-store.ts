@@ -38,7 +38,7 @@ export type AppState = AppData & {
   removeRoutineFromDay(routineId: string, day: DayOfWeek): void;
   reorderDay(day: DayOfWeek, routineIds: string[]): void;
   /** Saved steps the editor can reuse (saved immediately, independent of the routine's Save). */
-  saveStepTemplate(step: NewStep): void;
+  saveStepTemplate(step: NewStep, timed?: boolean): void;
   deleteStepTemplate(templateId: string): void;
   saveAddOnTemplate(addOn: NewAddOn): void;
   deleteAddOnTemplate(templateId: string): void;
@@ -49,7 +49,7 @@ export type AppState = AppData & {
 type PersistedState = AppData;
 
 export const STORAGE_KEY = 'kinder-day.state';
-const STORAGE_VERSION = 13;
+const STORAGE_VERSION = 14;
 
 /** Upgrades persisted data from older `STORAGE_VERSION`s. Steps run in order. */
 export const migrate = (persisted: unknown, version: number): PersistedState => {
@@ -142,6 +142,10 @@ export const migrate = (persisted: unknown, version: number): PersistedState => 
     }
     state = { ...state, results, history };
   }
+  if (version < 14) {
+    // v14: routines can be without timer; every existing one is timed.
+    state = { ...state, routines: (state.routines ?? []).map((r) => ({ ...r, timed: r.timed ?? true })) };
+  }
   return state;
 };
 
@@ -204,7 +208,7 @@ export const createAppStore = (storage: KeyValueStorage) =>
           removeRoutineFromDay: (routineId, day) =>
             apply((s) => routines.removeRoutineFromDay(s, routineId, day)),
           reorderDay: (day, routineIds) => apply((s) => routines.reorderDay(s, day, routineIds)),
-          saveStepTemplate: (step) => apply((s) => templates.saveStepTemplate(s, step)),
+          saveStepTemplate: (step, timed) => apply((s) => templates.saveStepTemplate(s, step, timed)),
           deleteStepTemplate: (templateId) => apply((s) => templates.deleteStepTemplate(s, templateId)),
           saveAddOnTemplate: (addOn) => apply((s) => templates.saveAddOnTemplate(s, addOn)),
           deleteAddOnTemplate: (templateId) => apply((s) => templates.deleteAddOnTemplate(s, templateId)),

@@ -34,6 +34,7 @@ export const newDraft = (existingCount: number): RoutineDraft => ({
   emoji: '⭐',
   color: ROUTINE_COLORS[existingCount % ROUTINE_COLORS.length],
   days: [...ALL_DAYS],
+  timed: true,
   steps: [],
   addOns: [],
   isNew: true,
@@ -52,20 +53,45 @@ export const toRoutine = ({ isNew: _isNew, ...routine }: RoutineDraft): Routine 
   name: routine.name.trim(),
 });
 
-/** "Create routine" / "Save changes" needs a name and at least one step. */
-export const canSave = (draft: RoutineDraft) => draft.name.trim().length > 0 && draft.steps.length > 0;
+/** A non-exact step without time in a timed routine: it must get one before the routine is saved. */
+export const needsTime = (step: Pick<Step, 'mins' | 'mode'>, timed: boolean) =>
+  timed && step.mode === 'max' && step.mins === 0;
+
+/** "Create routine" / "Save changes" needs a name, at least one step and every step timed. */
+export const canSave = (draft: RoutineDraft) =>
+  draft.name.trim().length > 0 &&
+  draft.steps.length > 0 &&
+  !draft.steps.some((s) => needsTime(s, draft.timed));
 
 export const clampMins = (mins: number) => Math.min(MAX_STEP_MINS, Math.max(MIN_STEP_MINS, mins));
 
 export const clampBufferMins = (mins: number) =>
   Math.min(MAX_BUFFER_MINS, Math.max(MIN_BUFFER_MINS, mins));
 
-export const clampStep = <T extends NewStep>(step: T): T => ({
+/** Clamps minutes and buffers. Without timer, non-exact steps have no time (0). */
+export const clampStep = <T extends NewStep>(step: T, timed = true): T => ({
   ...step,
-  mins: clampMins(step.mins),
+  mins: !timed && step.mode === 'max' ? 0 : clampMins(step.mins),
   beforeMins: clampBufferMins(step.beforeMins),
   afterMins: clampBufferMins(step.afterMins),
 });
+
+/**
+ * Switches a routine between timed and no timer. Without timer, non-exact steps lose their time;
+ * back to timed, they need one again (`needsTime`). Buffers and add-ons are kept but unused.
+ */
+export const setTimed = (draft: RoutineDraft, timed: boolean): RoutineDraft =>
+  draft.timed === timed
+    ? draft
+    : { ...draft, timed, steps: draft.steps.map((s) => (s.mode === 'max' ? { ...s, mins: 0 } : s)) };
+
+/** Flips a step between exact and the routine's other mode, giving a step that becomes exact a time. */
+export const toggleStepMode = (draft: RoutineDraft, stepId: string): RoutineDraft => {
+  const step = draft.steps.find((s) => s.id === stepId);
+  if (!step) return draft;
+  const mode = toggleMode(step.mode);
+  return updateStep(draft, stepId, { mode, mins: step.mins || DEFAULT_STEP_MINS });
+};
 
 export const toggleMode = (mode: StepMode): StepMode => (mode === 'max' ? 'exact' : 'max');
 
@@ -86,7 +112,7 @@ export const addStep = (draft: RoutineDraft, step: NewStep): RoutineDraft => {
   if (!label) return draft;
   return {
     ...draft,
-    steps: [...draft.steps, clampStep({ ...step, id: uid(), label })],
+    steps: [...draft.steps, clampStep({ ...step, id: uid(), label }, draft.timed)],
   };
 };
 
@@ -96,7 +122,7 @@ export const updateStep = (
   patch: Partial<Omit<Step, 'id'>>,
 ): RoutineDraft => ({
   ...draft,
-  steps: draft.steps.map((s) => (s.id === stepId ? clampStep({ ...s, ...patch }) : s)),
+  steps: draft.steps.map((s) => (s.id === stepId ? clampStep({ ...s, ...patch }, draft.timed) : s)),
 });
 
 export const removeStep = (draft: RoutineDraft, stepId: string): RoutineDraft => ({

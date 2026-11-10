@@ -115,7 +115,7 @@ it('resultSummary', () => {
 it('routine list labels', () => {
   expect(routineSummary(morning)).toBe('3 steps · 9 min · ⏰ 🪥 👕');
   expect(stepsTotalLabel(morning)).toBe('3 steps · 9 min total');
-  expect(stepsTotalLabel({ steps: [morning.steps[0]] })).toBe('1 step · 2 min total');
+  expect(stepsTotalLabel({ steps: [morning.steps[0]], timed: true })).toBe('1 step · 2 min total');
 });
 
 it('todayStatus', () => {

@@ -4,9 +4,9 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Emoji } from '@/components/emoji';
-import { BUFFER_HINT, MAX_BUFFER_MINS, MIN_BUFFER_MINS, STEP_MODES } from '@/domain/constants';
+import { BUFFER_HINT, MAX_BUFFER_MINS, MIN_BUFFER_MINS, NO_TIME_MODE, STEP_MODES } from '@/domain/constants';
 import { clampBufferMins, clampMins, EMPTY_NEW_STEP, toggleMode, type NewStep } from '@/domain/draft';
-import { isSavedTemplate } from '@/domain/templates';
+import { isStepSaved } from '@/domain/templates';
 import type { Step } from '@/domain/types';
 import { colors, fonts } from '@/theme/tokens';
 
@@ -20,18 +20,21 @@ type Props = {
   templates: Step[];
   onSaveTemplate: (step: NewStep) => void;
   onDeleteTemplate: (templateId: string) => void;
+  /** false: the routine has no timer, so a step is "No time" (no minutes) or exact (no buffers). */
+  timed: boolean;
 };
 
 /**
  * "Add a step…" box: saved steps to reuse, then icon picker, label, save for reuse, mode and minutes
- * (plus buffers for exact steps). Resets after adding.
+ * (plus buffers for exact steps in a timed routine). Resets after adding.
  */
-export function AddStepBox({ onAdd, templates, onSaveTemplate, onDeleteTemplate }: Props) {
+export function AddStepBox({ onAdd, templates, onSaveTemplate, onDeleteTemplate, timed }: Props) {
   const [step, setStep] = useState<NewStep>(EMPTY_NEW_STEP);
   const [picking, setPicking] = useState(false);
   const canAdd = step.label.trim().length > 0;
   const exact = step.mode === 'exact';
-  const saved = canAdd && isSavedTemplate(templates, step);
+  const saved = canAdd && isStepSaved(templates, step, timed);
+  const showMins = exact ? !timed : timed;
 
   const add = () => {
     if (!canAdd) return;
@@ -42,7 +45,13 @@ export function AddStepBox({ onAdd, templates, onSaveTemplate, onDeleteTemplate 
 
   return (
     <View style={styles.box}>
-      <SavedChips noun="saved steps" templates={templates} onPick={onAdd} onDelete={onDeleteTemplate} />
+      <SavedChips
+        noun="saved steps"
+        templates={templates}
+        onPick={onAdd}
+        onDelete={onDeleteTemplate}
+        timed={timed}
+      />
       <View style={styles.row}>
         <Pressable
           onPress={() => setPicking((p) => !p)}
@@ -79,8 +88,13 @@ export function AddStepBox({ onAdd, templates, onSaveTemplate, onDeleteTemplate 
         </Pressable>
       </View>
       <View style={styles.settings}>
-        <ModeChip mode={step.mode} onPress={() => setStep((s) => ({ ...s, mode: toggleMode(s.mode) }))} large />
-        {exact ? null : (
+        <ModeChip
+          mode={step.mode}
+          onPress={() => setStep((s) => ({ ...s, mode: toggleMode(s.mode) }))}
+          large
+          timed={timed}
+        />
+        {!showMins ? null : (
           <>
             <View style={styles.spacer} />
             <MinutesStepper
@@ -91,7 +105,7 @@ export function AddStepBox({ onAdd, templates, onSaveTemplate, onDeleteTemplate 
           </>
         )}
       </View>
-      {exact ? (
+      {exact && timed ? (
         <View style={styles.timers}>
           <MinutesStepper
             label="Before"
@@ -118,8 +132,8 @@ export function AddStepBox({ onAdd, templates, onSaveTemplate, onDeleteTemplate 
         </View>
       ) : null}
       <AppText size={13} color={colors.muted} style={styles.hint}>
-        {STEP_MODES[step.mode].hint}
-        {exact ? ` ${BUFFER_HINT}` : ''}
+        {exact || timed ? STEP_MODES[step.mode].hint : NO_TIME_MODE.hint}
+        {exact && timed ? ` ${BUFFER_HINT}` : ''}
       </AppText>
       {picking ? (
         <View style={styles.picker}>

@@ -18,9 +18,9 @@ import type { AddOnRun, Routine, RoutineRun, StepRun } from './types';
 /** The add-on running right now, if any. */
 export const activeAddOn = (run: RoutineRun | undefined) => run?.addOns.find((a) => a.doneAt === null);
 
-/** The routine's add-ons not used yet in this run: each one can be used once. */
+/** The routine's add-ons not used yet in this run: each one can be used once. None without timer. */
 export const availableAddOns = (routine: Routine, run: RoutineRun | undefined) =>
-  routine.addOns.filter((a) => !run?.addOns.some((used) => used.addOnId === a.id));
+  routine.timed ? routine.addOns.filter((a) => !run?.addOns.some((used) => used.addOnId === a.id)) : [];
 
 /** Time added to the routine's total by the add-ons used so far (each counts in full). */
 export const addOnsMs = (run: RoutineRun | undefined) =>
@@ -67,14 +67,15 @@ const withSteps = (run: RoutineRun, steps: Record<string, StepRun>): RoutineRun 
  * Enforces "at most one step runs":
  * - a finished run, or one with an add-on running: no step runs;
  * - in focus mode only the focus step may run (it is never auto-resumed after a pause);
- * - otherwise the current step runs if it is a max step (an exact step waits for a tap).
+ * - otherwise the current step runs if it is a max step in a timed routine (an exact step waits
+ *   for a tap; without timer, non-exact steps never run).
  * Every other step is paused.
  */
 export const settle = (routine: Routine, run: RoutineRun, now: number): RoutineRun => {
   const idle = run.finishedAt !== null || !!activeAddOn(run);
   const focus = idle ? undefined : focusStep(routine, run);
   const current = idle ? undefined : (focus ?? currentStep(routine, run));
-  const autoRunId = !focus && current?.mode === 'max' ? current.id : undefined;
+  const autoRunId = routine.timed && !focus && current?.mode === 'max' ? current.id : undefined;
   const keepId = focus?.id ?? autoRunId;
 
   const steps: Record<string, StepRun> = {};

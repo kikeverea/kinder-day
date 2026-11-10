@@ -31,6 +31,8 @@ export const colors = {
   mode: {
     max: { bg: '#FFF3C4', border: '#F0D26B' },
     exact: { bg: '#DDEEFF', border: '#8EC9FF' },
+    /** A non-exact step with no time (routines without timer). */
+    noTime: { bg: '#E3F6EA', border: '#8FE3B8' },
   },
 } as const;
 

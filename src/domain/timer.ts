@@ -24,13 +24,16 @@ export type TimerCard = {
   state: 'running' | 'overtime' | 'waiting';
 };
 
-/** The small timer card above the list. Undefined in focus mode, during an add-on or when everything is done. */
+/**
+ * The small timer card above the list. Undefined without timer, in focus mode, during an add-on or
+ * when everything is done.
+ */
 export const timerCard = (
   routine: Routine,
   run: RoutineRun | undefined,
   now: number,
 ): TimerCard | undefined => {
-  if (focusStep(routine, run) || activeAddOn(run)) return undefined;
+  if (!routine.timed || focusStep(routine, run) || activeAddOn(run)) return undefined;
   const step = currentStep(routine, run);
   if (!step) return undefined;
   const total = stepTotalMs(step);
@@ -102,8 +105,8 @@ export const stepRow = (step: Step, run: RoutineRun | undefined, now: number): S
   return {
     status: done ? 'done' : isRunning(sr) ? 'running' : isStarted(sr) ? 'paused' : 'idle',
     left: toSecs(left),
-    usedFraction: Math.min(1, usedMs(sr, now) / total),
-    overtime: !done && step.mode === 'max' && left <= 0 && isStarted(sr),
+    usedFraction: total ? Math.min(1, usedMs(sr, now) / total) : 0,
+    overtime: !done && step.mode === 'max' && total > 0 && left <= 0 && isStarted(sr),
     resettable: done && step.mode === 'exact',
   };
 };

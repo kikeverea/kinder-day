@@ -13,6 +13,7 @@ export const morning: Routine = {
   emoji: '🌅',
   color: '#FFD66B',
   days: [0, 1, 2, 3, 4, 5, 6],
+  timed: true,
   steps: [
     { id: 'wake', emoji: '⏰', label: 'Wake up', mins: 2, mode: 'max', beforeMins: 0, afterMins: 0 },
     { id: 'teeth', emoji: '🪥', label: 'Brush my teeth', mins: 2, mode: 'exact', beforeMins: 0, afterMins: 0 },
@@ -27,6 +28,7 @@ export const school: Routine = {
   emoji: '🏫',
   color: '#8FE3B8',
   days: [1, 2, 3, 4, 5],
+  timed: true,
   steps: [{ id: 'snack', emoji: '🍎', label: 'Have a snack', mins: 10, mode: 'max', beforeMins: 0, afterMins: 0 }],
   addOns: [],
 };
@@ -35,6 +37,22 @@ export const school: Routine = {
 export const buffered: Routine = {
   ...morning,
   steps: morning.steps.map((s) => (s.mode === 'exact' ? { ...s, beforeMins: 2, afterMins: 1 } : s)),
+};
+
+/** No timer: two steps with no time around an exact one. */
+export const relaxed: Routine = {
+  id: 'relaxed',
+  name: 'Relaxed',
+  emoji: '🌿',
+  color: '#8FE3B8',
+  days: [0, 1, 2, 3, 4, 5, 6],
+  timed: false,
+  steps: [
+    { id: 'hands', emoji: '🧼', label: 'Wash my hands', mins: 0, mode: 'max', beforeMins: 0, afterMins: 0 },
+    { id: 'read', emoji: '📚', label: 'Read', mins: 10, mode: 'exact', beforeMins: 0, afterMins: 0 },
+    { id: 'bag', emoji: '🎒', label: 'Empty my backpack', mins: 0, mode: 'max', beforeMins: 0, afterMins: 0 },
+  ],
+  addOns: [{ id: 'poop', emoji: '💩', label: 'Poop', mins: 5 }],
 };
 
 export const makeState = (overrides: Partial<AppData> = {}): AppData => ({

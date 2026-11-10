@@ -38,12 +38,12 @@ export default function Result() {
           {resultTitle(result)}
         </AppText>
         <AppText size={21} align="center" color={colors.secondary} style={styles.subtitle}>
-          {resultSubtitle(result)}
+          {resultSubtitle(result, routine.timed)}
         </AppText>
         <View style={styles.summary}>
           <Emoji size={22}>{routine.emoji}</Emoji>
           <AppText size={19} weight="semibold">
-            {resultSummary(result)}
+            {resultSummary(result, routine.timed)}
           </AppText>
         </View>
 

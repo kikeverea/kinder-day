@@ -13,10 +13,15 @@ type Props<T extends Saved> = {
   templates: T[];
   onPick: (template: T) => void;
   onDelete: (templateId: string) => void;
+  /** false: the routine has no timer, so non-exact steps show no time. */
+  timed?: boolean;
 };
 
-/** Saved steps or add-ons in an Add box: tap adds a copy to the routine, hold offers to remove it. */
-export function SavedChips<T extends Saved>({ noun, templates, onPick, onDelete }: Props<T>) {
+/**
+ * Saved steps or add-ons in an Add box: tap adds a copy to the routine, hold offers to remove it.
+ * Non-exact steps with no time (saved from a routine without timer) show no minutes.
+ */
+export function SavedChips<T extends Saved>({ noun, templates, onPick, onDelete, timed = true }: Props<T>) {
   if (templates.length === 0) return null;
 
   const confirmDelete = (t: T) =>
@@ -31,28 +36,33 @@ export function SavedChips<T extends Saved>({ noun, templates, onPick, onDelete 
         {noun[0].toUpperCase() + noun.slice(1)} · tap to add, hold to remove
       </AppText>
       <View style={styles.chips}>
-        {templates.map((t) => (
-          <Pressable
-            key={t.id}
-            onPress={() => onPick(t)}
-            onLongPress={() => confirmDelete(t)}
-            accessibilityRole="button"
-            accessibilityLabel={`Add ${t.label}`}
-            accessibilityHint={`Hold to remove it from ${noun}`}
-            style={({ pressed }) => [
-              styles.chip,
-              { borderColor: t.mode ? colors.mode[t.mode].border : colors.parentBorder },
-              pressed && styles.pressed,
-            ]}>
-            <Emoji size={18}>{t.emoji}</Emoji>
-            <AppText size={15} weight="semibold" numberOfLines={1} style={styles.label}>
-              {t.label}
-            </AppText>
-            <AppText size={13} color={colors.muted} tabular>
-              {t.mins} min
-            </AppText>
-          </Pressable>
-        ))}
+        {templates.map((t) => {
+          const noTime = t.mode === 'max' && (!timed || t.mins === 0);
+          return (
+            <Pressable
+              key={t.id}
+              onPress={() => onPick(t)}
+              onLongPress={() => confirmDelete(t)}
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${t.label}`}
+              accessibilityHint={`Hold to remove it from ${noun}`}
+              style={({ pressed }) => [
+                styles.chip,
+                { borderColor: t.mode ? colors.mode[noTime ? 'noTime' : t.mode].border : colors.parentBorder },
+                pressed && styles.pressed,
+              ]}>
+              <Emoji size={18}>{t.emoji}</Emoji>
+              <AppText size={15} weight="semibold" numberOfLines={1} style={styles.label}>
+                {t.label}
+              </AppText>
+              {noTime ? null : (
+                <AppText size={13} color={colors.muted} tabular>
+                  {t.mins} min
+                </AppText>
+              )}
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );

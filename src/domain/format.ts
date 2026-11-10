@@ -22,7 +22,7 @@ export const daysLabel = (days: DayOfWeek[]) => {
     .join(', ');
 };
 
-/** Total time allowed, including exact steps' buffers. */
+/** Total time allowed, including exact steps' buffers (timed routines). */
 export const routineMinutes = (routine: Pick<Routine, 'steps'>) =>
   routine.steps.reduce((sum, s) => sum + stepAllowanceMins(s), 0);
 
@@ -64,11 +64,15 @@ export const progressLabel = (done: number, total: number) =>
 
 /** Step row subtitle. */
 export const stepSubtitle = (step: Step, done: boolean) =>
-  step.mode === 'max'
-    ? `⏱️ Up to ${step.mins} min`
-    : done
+  step.mode === 'exact'
+    ? done
       ? `⏳ ${step.mins} min — done!`
-      : `⏳ Takes ${step.mins} min · tap to start`;
+      : `⏳ Takes ${step.mins} min · tap to start`
+    : step.mins === 0
+      ? done
+        ? '✓ Done!'
+        : '✓ Tap when it’s done'
+      : `⏱️ Up to ${step.mins} min`;
 
 /** Result screen title. A "regular" on time means steps were left undone. */
 export const resultTitle = (result: RoutineResult) =>
@@ -80,32 +84,38 @@ export const resultTitle = (result: RoutineResult) =>
         ? 'Almost on time!'
         : 'Hmm… almost!';
 
-/** Result screen subtitle. */
-export const resultSubtitle = (result: RoutineResult) => {
+/** Result screen subtitle. Routines without timer are only rated by the steps done. */
+export const resultSubtitle = (result: RoutineResult, timed = true) => {
   const left = result.totalSteps - result.doneSteps;
-  if (result.rating === 'good') return 'Every step, right on time. Super star!';
+  if (result.rating === 'good') {
+    return timed ? 'Every step, right on time. Super star!' : 'Every step done. Super star!';
+  }
   if (result.rating === 'bad') return "That took a while. Let's be quicker next time!";
   return result.overtimeSecs > 0
     ? "Just a little over — you've got this."
     : `So close! ${left === 1 ? 'One step is' : `${left} steps are`} still waiting for you.`;
 };
 
-/** "5 of 7 steps · 12 min" */
-export const resultSummary = (result: RoutineResult) =>
+/** "5 of 7 steps · 12 min" (no minutes without timer) */
+export const resultSummary = (result: RoutineResult, timed = true) =>
   `${result.doneSteps} of ${result.totalSteps} steps` +
-  (result.secs ? ` · ${Math.max(1, Math.round(result.secs / 60))} min` : '');
+  (timed && result.secs ? ` · ${Math.max(1, Math.round(result.secs / 60))} min` : '');
+
+/** "21 min", or "No timer" for relaxed routines. */
+const timeLabel = (routine: Pick<Routine, 'steps' | 'timed'>, suffix = '') =>
+  routine.timed ? `${routineMinutes(routine)} min${suffix}` : 'No timer';
 
 /** Routines list: "7 steps · 21 min · ⏰ 🚽 🪥 👕" */
 export const routineSummary = (routine: Routine) =>
-  `${plural(routine.steps.length, 'step')} · ${routineMinutes(routine)} min · ` +
+  `${plural(routine.steps.length, 'step')} · ${timeLabel(routine)} · ` +
   routine.steps
     .slice(0, 4)
     .map((s) => s.emoji)
     .join(' ');
 
 /** Editor steps header: "7 steps · 21 min total" */
-export const stepsTotalLabel = (routine: Pick<Routine, 'steps'>) =>
-  `${plural(routine.steps.length, 'step')} · ${routineMinutes(routine)} min total`;
+export const stepsTotalLabel = (routine: Pick<Routine, 'steps' | 'timed'>) =>
+  `${plural(routine.steps.length, 'step')} · ${timeLabel(routine, ' total')}`;
 
 /** Parent "Today" status line. */
 export const todayStatus = (opened: boolean, result: RoutineResult | undefined) =>
@@ -117,4 +127,4 @@ export const todayStatus = (opened: boolean, result: RoutineResult | undefined) 
 
 /** Week planner row: "7 steps · 21 min · Every day" */
 export const plannerSummary = (routine: Routine) =>
-  `${plural(routine.steps.length, 'step')} · ${routineMinutes(routine)} min · ${daysLabel(routine.days)}`;
+  `${plural(routine.steps.length, 'step')} · ${timeLabel(routine)} · ${daysLabel(routine.days)}`;

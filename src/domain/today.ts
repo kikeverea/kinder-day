@@ -162,7 +162,8 @@ export const finishRoutine = <S extends AppData>(state: S, routineId: string, no
   if (!routine) return s;
   const run = s.runs[routineId];
   const { done, total } = completion(routine, run);
-  const overtimeSecs = Math.max(0, -totalLeft(routine, run, now));
+  // Without timer there's no total to go over: the rating only looks at the steps done.
+  const overtimeSecs = routine.timed ? Math.max(0, -totalLeft(routine, run, now)) : 0;
   const stopped = run && settle(routine, { ...endAddOn(run, now), finishedAt: now }, now);
   return {
     ...(stopped ? withRun(s, routineId, stopped) : s),

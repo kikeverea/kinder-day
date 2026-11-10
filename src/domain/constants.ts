@@ -53,6 +53,20 @@ export const STEP_MODES: Record<StepMode, { label: string; hint: string }> = {
   },
 };
 
+/** A non-exact step in a routine without timer (the mode chip's "max" label there). */
+export const NO_TIME_MODE = { label: '🌿 No time', hint: 'No timer: tap it when it’s done.' };
+
+export const ROUTINE_TYPES = [
+  { key: 'timed', label: '⏱️ Timed' },
+  { key: 'untimed', label: '🌿 No timer' },
+] as const;
+
+export const ROUTINE_TYPE_HINT = {
+  timed: 'Steps have a time and the routine counts down. The result depends on finishing on time.',
+  untimed:
+    'For relaxed routines: steps are just ticked off, with no clock. Exact steps still keep their timer.',
+} as const;
+
 export const ADD_ON_HINT =
   'For things that can come up, like a poop break 💩. Not part of the steps: the kid taps one during the routine to add its time and start its timer.';
 
